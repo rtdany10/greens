@@ -71,19 +71,3 @@ def half_day(doc, method=None):
 				diff = time_diff_in_hours(end_time, start_time)
 				if diff < 5:
 					frappe.throw('not completed 5 Hours')
-
-		# if emp.log_type == 'IN':
-		# 	start_time=get_datetime(emp.time)
-		# if emp.log_type == 'OUT':
-		# 	end_time=get_datetime(emp.time)
-		#
-		# frappe.msgprint(start_time)
-		# frappe.msgprint(end_time)
-
-
-
-# if emp.log_type == 'IN':
-# 	start_time=get_datetime(emp.time)
-# if emp.log_type=='OUT':
-# 	end_time=get_datetime(emp.time)
-# diff = time_diff_in_hours(end_time, start_time)
