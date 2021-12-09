@@ -4,7 +4,7 @@
 
 import frappe
 from frappe.utils import flt, get_first_day, get_last_day, today
-
+from frappe.utils import add_to_date, get_datetime, get_time_str, time_diff_in_hours
 from erpnext.hr.utils import create_additional_leave_ledger_entry, get_leave_allocations
 
 @frappe.whitelist()
@@ -54,3 +54,36 @@ def allocate_leave():
 					'new_leaves_allocated': flt(earned_leaves)
 				}).submit()
 	return
+
+def half_day(doc, method=None):
+	if doc.status == 'Half Day':
+		emp = frappe.get_all('Employee Checkin',filters={
+		'employee': ['=',doc.employee],
+		# 'time': ['=',today()]
+		},
+		fields=['employee_name', 'employee','log_type','time']
+		)
+		for i in emp:
+			if i.log_type == 'IN':
+				start_time=get_datetime(str(i.time))
+			if i.log_type == 'OUT':
+				end_time=get_datetime(str(i.time))
+				diff = time_diff_in_hours(end_time, start_time)
+				if diff < 5:
+					frappe.throw('not completed 5 Hours')
+
+		# if emp.log_type == 'IN':
+		# 	start_time=get_datetime(emp.time)
+		# if emp.log_type == 'OUT':
+		# 	end_time=get_datetime(emp.time)
+		#
+		# frappe.msgprint(start_time)
+		# frappe.msgprint(end_time)
+
+
+
+# if emp.log_type == 'IN':
+# 	start_time=get_datetime(emp.time)
+# if emp.log_type=='OUT':
+# 	end_time=get_datetime(emp.time)
+# diff = time_diff_in_hours(end_time, start_time)

@@ -98,14 +98,12 @@ app_license = "GPL v3"
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-#	}
-# }
-
+doc_events = {
+	"Attendance": {
+		"on_submit": "greens.tasks.half_day",
+	}
+}
+# on_submit
 # Scheduled Tasks
 # ---------------
 
@@ -181,4 +179,3 @@ app_license = "GPL v3"
 # auth_hooks = [
 # 	"greens.auth.validate"
 # ]
-
