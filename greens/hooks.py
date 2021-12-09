@@ -100,7 +100,7 @@ app_license = "GPL v3"
 
 doc_events = {
 	"Attendance": {
-		"on_submit": "greens.tasks.half_day",
+		"before_save": "greens.tasks.half_day",
 	}
 }
 # on_submit
