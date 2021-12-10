@@ -3,10 +3,13 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
-from frappe.utils import flt, get_first_day, get_last_day, today , add_to_date
+from frappe.utils import flt, get_first_day, get_last_day, today , add_to_date,datetime
 from frappe.utils import add_to_date, get_datetime, get_time_str, time_diff_in_hours
 from erpnext.hr.utils import create_additional_leave_ledger_entry, get_leave_allocations
-from datetime import datetime
+from erpnext.hr.doctype.employee_checkin.employee_checkin import (
+	calculate_working_hours,
+)
+
 
 @frappe.whitelist()
 def allocate_leave():
@@ -59,47 +62,38 @@ def allocate_leave():
 def half_day(doc, method=None):
 	shift_checkout(doc)
 	if doc.status == 'Half Day':
-		emp = frappe.get_all('Employee Checkin',filters={
-		'employee': ['=',doc.employee],
-		'time': ['>',today()],
-		'time': ['<', add_to_date(datetime.now(), days=1, as_string=True)],
-
-		},
-		fields=['employee_name', 'employee','log_type','time']
-		)
-		for i in emp:
-			if i.log_type == 'IN':
-				start_time=get_datetime(str(i.time))
-			if i.log_type == 'OUT':
-				end_time=get_datetime(str(i.time))
-				diff = time_diff_in_hours(end_time, start_time)
-				if diff < 5:
-					frappe.throw('not completed 5 Hours')
-
-
+		logs = frappe.db.get_list('Employee Checkin', fields="*", filters={
+			'skip_auto_attendance':'0',
+			'employee': ['=',doc.employee],
+			'time': ['>',today()],
+			'time': ['<', add_to_date(today(), days=1, as_string=True)],
+		}, order_by="employee,time")
+		total_working_hours = calculate_working_hours(logs,check_in_out_type='Strictly based on Log Type in Employee Checkin',working_hours_calc_type='First Check-in and Last Check-out')[0]
+		if str(total_working_hours)< str(5):
+			frappe.throw('Not completed 5 Hours')
 
 def shift_checkout(doc):
 	emp1 = frappe.get_all('Employee Checkin',filters={
 		'employee': ['=',doc.employee],
 		'time': ['>',today()],
-		'time': ['<', add_to_date(datetime.now(), days=1, as_string=True)],
+		'time': ['<', add_to_date(today(), days=1, as_string=True)],
 	},
-	fields=['employee_name', 'employee','log_type','time']
+	fields=['employee_name', 'employee','count(name) as count','log_type','time'],
+	group_by="log_type",
 	)
-	k=[]
-	l=[]
-	for j in emp1:
-		if j.log_type=='IN':
-			k.append(j)
-		if j.log_type=='OUT':
-			l.append(j)
-	if str(len(k))>str(len(l)):
+	total_in = 0
+	total_out = 0
+	for row in emp1:
+		if row.log_type=='IN':
+			total_in = row.count
+		if row.log_type=='OUT':
+			total_out = row.count
+	if str(total_in)>str(total_out):
 		shift_detail = frappe.get_doc({
-		    'doctype': 'Employee Checkin',
-		    'employee': doc.employee,
-			'log_type':'OUT',
-			'time':today(),
-			'employee_name': doc.employee_name
+			    'doctype': 'Employee Checkin',
+			    'employee': doc.employee,
+				'log_type':'OUT',
+				'time':today(),
+				'employee_name': doc.employee_name
 		})
 		shift_detail.insert()
-		frappe.msgprint(str(doc))
