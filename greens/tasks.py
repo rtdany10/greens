@@ -68,22 +68,27 @@ def half_day(doc, method=None):
 			'time': ['>',today()],
 			'time': ['<', add_to_date(today(), days=1, as_string=True)],
 		}, order_by="employee,time")
-		total_working_hours = calculate_working_hours(logs,check_in_out_type='Strictly based on Log Type in Employee Checkin',working_hours_calc_type='First Check-in and Last Check-out')[0]
+		total_working_hours = calculate_working_hours(
+			logs,
+			'Strictly based on Log Type in Employee Checkin',
+			'First Check-in and Last Check-out'
+		)[0]
 		if str(total_working_hours)< str(5):
 			frappe.throw('Not completed 5 Hours')
 
 def shift_checkout(doc):
-	emp1 = frappe.get_all('Employee Checkin',filters={
-		'employee': ['=',doc.employee],
-		'time': ['>',today()],
-		'time': ['<', add_to_date(today(), days=1, as_string=True)],
-	},
-	fields=['employee_name', 'employee','count(name) as count','log_type','time'],
-	group_by="log_type",
+	emp_details = frappe.get_all('Employee Checkin',
+		filters={
+			'employee': ['=',doc.employee],
+			'time': ['>',today()],
+			'time': ['<', add_to_date(today(), days=1, as_string=True)],
+		},
+		fields=['employee_name', 'employee','count(name) as count','log_type','time'],
+		group_by="log_type",
 	)
 	total_in = 0
 	total_out = 0
-	for row in emp1:
+	for row in emp_details:
 		if row.log_type=='IN':
 			total_in = row.count
 		if row.log_type=='OUT':
