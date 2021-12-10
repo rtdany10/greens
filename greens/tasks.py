@@ -73,7 +73,7 @@ def half_day(doc, method=None):
 			'Strictly based on Log Type in Employee Checkin',
 			'First Check-in and Last Check-out'
 		)[0]
-		if str(total_working_hours)< str(5):
+		if total_working_hours < 5:
 			frappe.throw('Not completed 5 Hours')
 
 def shift_checkout(doc):
