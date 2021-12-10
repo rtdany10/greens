@@ -97,7 +97,6 @@ app_license = "GPL v3"
 # Document Events
 # ---------------
 # Hook on document methods and events
-
 doc_events = {
 	"Attendance": {
 		"before_save": "greens.tasks.half_day",

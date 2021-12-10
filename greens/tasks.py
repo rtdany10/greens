@@ -3,7 +3,7 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
-from frappe.utils import flt, get_first_day, get_last_day, today , add_to_date,datetime
+from frappe.utils import flt, get_first_day, get_last_day, today, add_to_date, datetime
 from frappe.utils import add_to_date, get_datetime, get_time_str, time_diff_in_hours
 from erpnext.hr.utils import create_additional_leave_ledger_entry, get_leave_allocations
 from erpnext.hr.doctype.employee_checkin.employee_checkin import (
@@ -73,7 +73,7 @@ def half_day(doc, method=None):
 			'Strictly based on Log Type in Employee Checkin',
 			'First Check-in and Last Check-out'
 		)[0]
-		if total_working_hours < 5:
+		if int(total_working_hours) < 5:
 			frappe.throw('Not completed 5 Hours')
 
 def shift_checkout(doc):
@@ -95,8 +95,8 @@ def shift_checkout(doc):
 			total_out = row.count
 	if str(total_in)>str(total_out):
 		shift_detail = frappe.get_doc({
-			    'doctype': 'Employee Checkin',
-			    'employee': doc.employee,
+				'doctype': 'Employee Checkin',
+				'employee': doc.employee,
 				'log_type':'OUT',
 				'time':today(),
 				'employee_name': doc.employee_name
