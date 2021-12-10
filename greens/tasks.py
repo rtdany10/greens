@@ -57,7 +57,7 @@ def allocate_leave():
 	return
 
 def half_day(doc, method=None):
-	shift_checkout(doc, method=None)
+	shift_checkout(doc)
 	if doc.status == 'Half Day':
 		emp = frappe.get_all('Employee Checkin',filters={
 		'employee': ['=',doc.employee],
@@ -78,11 +78,11 @@ def half_day(doc, method=None):
 
 
 
-def shift_checkout(doc, method=None):
+def shift_checkout(doc):
 	emp1 = frappe.get_all('Employee Checkin',filters={
-	'employee': ['=',doc.employee],
-	'time': ['>',today()],
-	'time': ['<', add_to_date(datetime.now(), days=1, as_string=True)],
+		'employee': ['=',doc.employee],
+		'time': ['>',today()],
+		'time': ['<', add_to_date(datetime.now(), days=1, as_string=True)],
 	},
 	fields=['employee_name', 'employee','log_type','time']
 	)
@@ -93,30 +93,13 @@ def shift_checkout(doc, method=None):
 			k.append(j)
 		if j.log_type=='OUT':
 			l.append(j)
-	frappe.msgprint(str(len(l)))
-	frappe.msgprint(str(len(k)))
 	if str(len(k))>str(len(l)):
-		doc = frappe.get_doc({
+		shift_detail = frappe.get_doc({
 		    'doctype': 'Employee Checkin',
 		    'employee': doc.employee,
 			'log_type':'OUT',
 			'time':today(),
 			'employee_name': doc.employee_name
 		})
-		doc.insert()
+		shift_detail.insert()
 		frappe.msgprint(str(doc))
-		
-
-
-
-
-
-# shift_out=frappe.new_doc('Employee Checkin')
-# shift_out.employee = doc.employee
-# shift_out.log_type ='OUT'
-# shift_out.time = today()
-# shift_out.employee_name = doc.employee_name
-# frappe.msgprint(shift_out.employee)
-# frappe.msgprint(shift_out.employee_name)
-# shift_out.insert()
-# frappe.msgprint(str(shift_out))
