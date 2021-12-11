@@ -35,7 +35,7 @@ def allocate_leave():
             "Attendance",
             filters={
                 "attendance_date": ["between", [month_start, today_date]],
-                "docstatus": 1
+                "docstatus": 1,
             },
             fields=["DISTINCT(employee) as employee"],
         )
@@ -47,7 +47,7 @@ def allocate_leave():
             filters={
                 "attendance_date": ["between", [month_start, today_date]],
                 "employee": emp,
-                "docstatus": 1
+                "docstatus": 1,
             },
             fields=["COUNT(*) as marked_days"],
         )[0].marked_days
@@ -110,7 +110,7 @@ def allocate_leave():
             total_working_hours = calculate_working_hours(
                 logs,
                 "Strictly based on Log Type in Employee Checkin",
-                "First Check-in and Last Check-out"
+                "First Check-in and Last Check-out",
             )[0]
             if int(total_working_hours) < 5:
                 frappe.throw("Not completed 5 Hours")
@@ -146,7 +146,7 @@ def allocate_leave():
                         "employee": doc.employee,
                         "log_type": "OUT",
                         "time": today(),
-                        "employee_name": doc.employee_name
+                        "employee_name": doc.employee_name,
                     }
                 )
                 shift_detail.insert()
