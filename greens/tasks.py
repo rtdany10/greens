@@ -9,13 +9,7 @@ from erpnext.hr.utils import (
     create_additional_leave_ledger_entry,
     get_leave_allocations,
 )
-from frappe.utils import (
-    add_to_date,
-    flt,
-    get_first_day,
-    get_last_day,
-    today,
-)
+from frappe.utils import add_to_date, flt, get_first_day, get_last_day, today
 
 
 @frappe.whitelist()
