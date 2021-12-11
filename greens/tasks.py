@@ -30,26 +30,26 @@ def allocate_leave():
     leave_type = frappe.get_doc("Leave Type", "Weekly Off")
 
     employee = [
-        x.get('employee')
+        x.get("employee")
         for x in frappe.get_all(
             "Attendance",
-            filters = {
+            filters={
                 "attendance_date": ["between", [month_start, today_date]],
                 "docstatus": 1
             },
-            fields = ["DISTINCT(employee) as employee"],
+            fields=["DISTINCT(employee) as employee"],
         )
     ]
 
     for emp in employee:
         marked_days = frappe.get_all(
             "Attendance",
-            filters = {
+            filters={
                 "attendance_date": ["between", [month_start, today_date]],
                 "employee": emp,
                 "docstatus": 1
             },
-            fields = ["COUNT(*) as marked_days"],
+            fields=["COUNT(*) as marked_days"],
         )[0].marked_days
 
         if marked_days >= 6:
@@ -88,7 +88,7 @@ def allocate_leave():
                         "leave_type": leave_type.name,
                         "from_date": month_start,
                         "to_date": get_last_day(today_date),
-                        "new_leaves_allocated": flt(earned_leaves)
+                        "new_leaves_allocated": flt(earned_leaves),
                     }
                 ).submit()
     return
@@ -100,9 +100,9 @@ def allocate_leave():
                 "Employee Checkin",
                 fields="*",
                 filters={
-                    "skip_auto_attendance":"0",
-                    "employee": ["=",doc.employee],
-                    "time": [">",today()],
+                    "skip_auto_attendance": "0",
+                    "employee": ["=", doc.employee],
+                    "time": [">", today()],
                     "time": ["<", add_to_date(today(), days=1, as_string=True)],
                 },
                 order_by="employee,time",
@@ -119,34 +119,34 @@ def allocate_leave():
         emp_details = frappe.get_all(
             "Employee Checkin",
             filters={
-                "employee": ["=",doc.employee],
-                "time": ['>',today()],
-                "time": ['<', add_to_date(today(), days=1, as_string=True)],
+                "employee": ["=", doc.employee],
+                "time": [">", today()],
+                "time": ["<", add_to_date(today(), days=1, as_string=True)],
             },
             fields=[
                 "employee_name",
                 "employee",
                 "count(name) as count",
                 "log_type",
-                "time"
+                "time",
             ],
             group_by="log_type",
         )
         total_in = 0
         total_out = 0
         for row in emp_details:
-            if row.log_type=="IN":
+            if row.log_type == "IN":
                 total_in = row.count
-            if row.log_type=="OUT":
+            if row.log_type == "OUT":
                 total_out = row.count
-            if str(total_in)>str(total_out):
+            if str(total_in) > str(total_out):
                 shift_detail = frappe.get_doc(
                     {
-                        'doctype': 'Employee Checkin',
-                        'employee': doc.employee,
-                        'log_type':'OUT',
-                        'time':today(),
-                        'employee_name': doc.employee_name
+                        "doctype": "Employee Checkin",
+                        "employee": doc.employee,
+                        "log_type": "OUT",
+                        "time": today(),
+                        "employee_name": doc.employee_name
                     }
                 )
                 shift_detail.insert()
