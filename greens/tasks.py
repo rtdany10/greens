@@ -7,24 +7,20 @@ from frappe.utils import flt, get_first_day, get_last_day, today
 
 from erpnext.hr.utils import create_additional_leave_ledger_entry, get_leave_allocations
 
+
 @frappe.whitelist()
 def allocate_leave():
 	today_date = today()
 	month_start = get_first_day(today_date)
 	leave_type = frappe.get_doc('Leave Type', 'Weekly Off')
 
-	employee = [x.get('employee') for x in frappe.get_all("Attendance", filters = {
+	employee = frappe.get_all("Attendance", filters = {
 		"attendance_date": ["between", [month_start, today_date]],
 		"docstatus": 1
-	}, fields = ["DISTINCT(employee) as employee"])]
+	}, fields = ["DISTINCT(employee) as employee"])
 
 	for emp in employee:
-		marked_days = frappe.get_all("Attendance", filters = {
-			"attendance_date": ["between", [month_start, today_date]],
-			"employee": emp,
-			"docstatus": 1
-		}, fields = ["COUNT(*) as marked_days"])[0].marked_days
-
+		marked_days = emp["marked_days"]
 		if marked_days >= 6:
 			leave_allocations = get_leave_allocations(today_date, leave_type.name)
 			earned_leaves = 0
