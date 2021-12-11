@@ -1,0 +1,3 @@
+[flake8]
+per-file-ignores =
+    greens/hooks.py:F401
