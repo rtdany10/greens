@@ -1,7 +1,6 @@
 
 # Copyright (c) 2021, Wahni Green Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
-
 import frappe
 from erpnext.hr.doctype.employee_checkin.employee_checkin import (
     calculate_working_hours,
@@ -12,13 +11,9 @@ from erpnext.hr.utils import (
 )
 from frappe.utils import (
     add_to_date,
-    datetime,
     flt,
-    get_datetime,
     get_first_day,
     get_last_day,
-    get_time_str,
-    time_diff_in_hours,
     today,
 )
 
@@ -28,7 +23,6 @@ def allocate_leave():
     today_date = today()
     month_start = get_first_day(today_date)
     leave_type = frappe.get_doc("Leave Type", "Weekly Off")
-
     employee = [
         x.get("employee")
         for x in frappe.get_all(
@@ -51,7 +45,6 @@ def allocate_leave():
             },
             fields=["COUNT(*) as marked_days"],
         )[0].marked_days
-
         if marked_days >= 6:
             leave_allocations = get_leave_allocations(today_date, leave_type.name)
             earned_leaves = 0
@@ -61,7 +54,6 @@ def allocate_leave():
                 earned_leaves += 1.5
             if marked_days == 21:
                 earned_leaves += 1.5
-
             for d in leave_allocations:
                 allocation = frappe.get_doc("Leave Allocation", d.name)
                 new_allocation = flt(allocation.total_leaves_allocated) + flt(
@@ -79,7 +71,6 @@ def allocate_leave():
                     create_additional_leave_ledger_entry(
                         allocation, earned_leaves, today_date
                     )
-
             if not leave_allocations:
                 frappe.get_doc(
                     {
