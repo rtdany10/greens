@@ -1,6 +1,3 @@
-
-# Copyright (c) 2021, Wahni Green Technologies Pvt. Ltd. and Contributors
-# License: GNU General Public License v3. See license.txt
 import frappe
 from erpnext.hr.doctype.employee_checkin.employee_checkin import (
     calculate_working_hours,
