@@ -22,6 +22,7 @@ from frappe.utils import (
     today,
 )
 
+
 @frappe.whitelist()
 def allocate_leave():
     today_date = today()
@@ -73,13 +74,16 @@ def allocate_leave():
     def half_day(doc, method=None):
         shift_checkout(doc)
         if doc.status == 'Half Day':
-            logs = frappe.db.get_list('Employee Checkin', fields="*", filters={
-                'skip_auto_attendance':'0',
-                'employee': ['=',doc.employee],
-                'time': ['>',today()],
-                'time': ['<', add_to_date(today(), days=1, as_string=True)],
-                }, order_by="employee,time")
-                total_working_hours = calculate_working_hours(
+            logs = frappe.db.get_list('Employee Checkin', fields="*",
+                filters={
+                    'skip_auto_attendance':'0',
+                    'employee': ['=',doc.employee],
+                    'time': ['>',today()],
+                    'time': ['<', add_to_date(today(), days=1, as_string=True)],
+                },
+                order_by="employee,time"
+            )
+            total_working_hours = calculate_working_hours(
                 logs,
                 'Strictly based on Log Type in Employee Checkin',
                 'First Check-in and Last Check-out'
