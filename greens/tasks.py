@@ -3,7 +3,6 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
-
 from erpnext.hr.utils import (
 	create_additional_leave_ledger_entry,
 	get_leave_allocations
@@ -74,29 +73,30 @@ def allocate_leave():
 
 	def half_day(doc, method=None):
 		shift_checkout(doc)
-			if doc.status == 'Half Day':
-				logs = frappe.db.get_list('Employee Checkin', fields="*", filters={
-					'skip_auto_attendance':'0',
-					'employee': ['=',doc.employee],
-					'time': ['>',today()],
-					'time': ['<', add_to_date(today(), days=1, as_string=True)],
-					}, order_by="employee,time")
-					total_working_hours = calculate_working_hours(
-					logs,
-					'Strictly based on Log Type in Employee Checkin',
-					'First Check-in and Last Check-out'
-				)[0]
-				if int(total_working_hours) < 5:
-					frappe.throw('Not completed 5 Hours')
+		if doc.status == 'Half Day':
+			logs = frappe.db.get_list('Employee Checkin', fields="*", filters={
+				'skip_auto_attendance':'0',
+				'employee': ['=',doc.employee],
+				'time': ['>',today()],
+				'time': ['<', add_to_date(today(), days=1, as_string=True)],
+				}, order_by="employee,time")
+				total_working_hours = calculate_working_hours(
+				logs,
+				'Strictly based on Log Type in Employee Checkin',
+				'First Check-in and Last Check-out'
+			)[0]
+			if int(total_working_hours) < 5:
+				frappe.throw('Not completed 5 Hours')
 
 	def shift_checkout(doc):
-		emp_details = frappe.get_all('Employee Checkin',filters={
-			'employee': ['=',doc.employee],
-			'time': ['>',today()],
-			'time': ['<', add_to_date(today(), days=1, as_string=True)],
-		},
-		fields=['employee_name', 'employee','count(name) as count','log_type','time'],
-		group_by="log_type",
+		emp_details = frappe.get_all('Employee Checkin',
+			filters={
+				'employee': ['=',doc.employee],
+				'time': ['>',today()],
+				'time': ['<', add_to_date(today(), days=1, as_string=True)],
+			},
+			fields=['employee_name', 'employee','count(name) as count','log_type','time'],
+			group_by="log_type",
 		)
 		total_in = 0
 		total_out = 0
