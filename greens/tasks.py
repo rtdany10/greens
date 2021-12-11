@@ -1,4 +1,3 @@
-
 # Copyright (c) 2021, Wahni Green Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
@@ -12,7 +11,7 @@ from erpnext.hr.utils import create_additional_leave_ledger_entry, get_leave_all
 def allocate_leave():
 	today_date = today()
 	month_start = get_first_day(today_date)
-	leave_type = frappe.get_doc('Leave Type', 'Weekly Off')
+	leave_type = frappe.get_doc("Leave Type", 'Weekly Off')
 
 	employee = frappe.get_all("Attendance", filters = {
 		"attendance_date": ["between", [month_start, today_date]],
