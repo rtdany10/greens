@@ -1,4 +1,4 @@
-name: Lint Code Base
+name: Linters
 
 on:
   pull_request:
@@ -15,9 +15,5 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Lint Code Base
-        uses: github/super-linter/slim@v4
-        env:
-          VALIDATE_ALL_CODEBASE: false
-          DEFAULT_BRANCH: main
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: flake8
+        uses: tayfun/flake8-your-pr@1.0.1
