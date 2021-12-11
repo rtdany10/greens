@@ -7,12 +7,12 @@ from frappe.utils import (
 	add_to_date,
 	datetime,
 	flt,
+	get_datetime,
 	get_first_day,
 	get_last_day,
-	get_datetime,
 	get_time_str,
+	time_diff_in_hours,
 	today,
-	time_diff_in_hours
 )
 from erpnext.hr.utils import (
 	get_leave_allocations,
