@@ -3,6 +3,14 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
+
+from erpnext.hr.utils import (
+	create_additional_leave_ledger_entry,
+	get_leave_allocations
+)
+from erpnext.hr.doctype.employee_checkin.employee_checkin import (
+	calculate_working_hours,
+)
 from frappe.utils import (
 	add_to_date,
 	datetime,
@@ -13,14 +21,6 @@ from frappe.utils import (
 	get_time_str,
 	time_diff_in_hours,
 	today,
-)
-from erpnext.hr.utils import (
-	get_leave_allocations,
-	create_additional_leave_ledger_entry
-
-)
-from erpnext.hr.doctype.employee_checkin.employee_checkin import (
-	calculate_working_hours,
 )
 
 
@@ -73,21 +73,21 @@ def allocate_leave():
 	return
 
 	def half_day(doc, method=None):
-	shift_checkout(doc)
-		if doc.status == 'Half Day':
-			logs = frappe.db.get_list('Employee Checkin', fields="*", filters={
-				'skip_auto_attendance':'0',
-				'employee': ['=',doc.employee],
-				'time': ['>',today()],
-				'time': ['<', add_to_date(today(), days=1, as_string=True)],
-				}, order_by="employee,time")
-				total_working_hours = calculate_working_hours(
-				logs,
-				'Strictly based on Log Type in Employee Checkin',
-				'First Check-in and Last Check-out'
-			)[0]
-			if int(total_working_hours) < 5:
-				frappe.throw('Not completed 5 Hours')
+		shift_checkout(doc)
+			if doc.status == 'Half Day':
+				logs = frappe.db.get_list('Employee Checkin', fields="*", filters={
+					'skip_auto_attendance':'0',
+					'employee': ['=',doc.employee],
+					'time': ['>',today()],
+					'time': ['<', add_to_date(today(), days=1, as_string=True)],
+					}, order_by="employee,time")
+					total_working_hours = calculate_working_hours(
+					logs,
+					'Strictly based on Log Type in Employee Checkin',
+					'First Check-in and Last Check-out'
+				)[0]
+				if int(total_working_hours) < 5:
+					frappe.throw('Not completed 5 Hours')
 
 	def shift_checkout(doc):
 		emp_details = frappe.get_all('Employee Checkin',filters={
