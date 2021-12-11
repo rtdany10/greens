@@ -10,7 +10,7 @@ from frappe.utils import (
 	today,add_to_date,
 	datetime,get_datetime,
 	get_time_str,
-	time_diff_in_hours
+	time_diff_in_hours,
 )
 from erpnext.hr.utils import (
 	create_additional_leave_ledger_entry,
