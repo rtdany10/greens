@@ -1,8 +1,8 @@
 name: Linters
 
 on:
-  pull_request:
-    branches: [main]
+  pull_request_target:
+    types: [assigned, opened, synchronize, reopened]
 
 jobs:
   build:
