@@ -77,7 +77,6 @@ def allocate_leave():
 
 
 def half_day(doc, method=None):
-    shift_checkout(doc)
     if doc.status == "Half Day":
         logs = frappe.db.get_list(
             "Employee Checkin",
@@ -97,28 +96,43 @@ def half_day(doc, method=None):
             frappe.throw("Not completed 5 Hours")
 
 
-def shift_checkout(doc):
-    emp_details = frappe.get_all(
+def shift_checkout():
+    employees = frappe.get_all(
         "Employee Checkin",
         filters=[
-            ["employee","=", doc.employee],
             ["time", "between", [today(), add_to_date(today(), days=1, as_string=True)]],
         ],
         fields=[
-            "count(name) as count",
+            "employee"
         ],
-        group_by="log_type",
+        group_by="employee"
     )
-    total_in = emp_details[0]
-    total_out = emp_details[1]
-    if str(total_in) > str(total_out):
-        shift_detail = frappe.get_doc(
-            {
-                "doctype": "Employee Checkin",
-                "employee": doc.employee,
-                "log_type": "OUT",
-                "time": today(),
-                "employee_name": doc.employee_name,
-            }
+    for emp_check in employees:
+        emp_logs = frappe.db.get_list(
+            "Employee Checkin",
+            fields=[
+                "log_type",
+                "count(name) as count"
+            ],
+            filters=[
+                ["employee","=", emp_check.employee],
+                ["time", "between", [today(), add_to_date(today(), days=1, as_string=True)]],
+            ],
+            group_by="employee,log_type",
+            order_by="log_type",
         )
-        shift_detail.insert()
+        if emp_logs[0]["count"] > emp_logs[1]["count"]:
+            for i in range(emp_logs[1]["count"]):
+                if emp_logs[0]["count"] == emp_logs[1]["count"]:
+                    break
+                else:
+                    shift_detail = frappe.get_doc(
+                        {
+                            "doctype": "Employee Checkin",
+                            "employee": emp_check.employee,
+                            "log_type": "OUT",
+                            "time": today(),
+                            "employee_name": emp_check.employee_name,
+                        }
+                    )
+                    shift_detail.insert()

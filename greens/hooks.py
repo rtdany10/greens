@@ -106,23 +106,10 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-#     "all": [
-#         "greens.tasks.all"
-#     ],
-#     "daily": [
-#         "greens.tasks.daily"
-#     ],
-#     "hourly": [
-#         "greens.tasks.hourly"
-#     ],
-#     "weekly": [
-#         "greens.tasks.weekly"
-#     ],
-#     "monthly": [
-#         "greens.tasks.monthly"
-#     ],
-# }
+scheduler_events = {
+    "daily": [
+        "greens.tasks.shift_checkout"
+}
 
 # Testing
 # -------
