@@ -2,11 +2,14 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
-from erpnext.hr.utils import (
-	create_additional_leave_ledger_entry,
-	get_leave_allocations,
+from erpnext.hr.doctype.employee_checkin.employee_checkin import (
+    calculate_working_hours,
 )
-from frappe.utils import flt, get_first_day, get_last_day, today
+from erpnext.hr.utils import (
+    create_additional_leave_ledger_entry,
+    get_leave_allocations,
+)
+from frappe.utils import add_to_date, flt, get_first_day, get_last_day, today
 
 
 @frappe.whitelist()
@@ -53,3 +56,64 @@ def allocate_leave():
 					"new_leaves_allocated": flt(earned_leaves)
 				}).submit()
 	return
+
+def half_day(doc, method=None):
+    if doc.status == "Half Day":
+        logs = frappe.db.get_list(
+            "Employee Checkin",
+            fields="*",
+            filters=[
+                ["employee","=", doc.employee],
+                ["time", "between", [today(), add_to_date(today(), days=1, as_string=True)]],
+            ],
+            order_by="employee,time",
+        )
+        total_working_hours = calculate_working_hours(
+            logs,
+            "Strictly based on Log Type in Employee Checkin",
+            "First Check-in and Last Check-out",
+        )[0]
+        if int(total_working_hours) < 5:
+            frappe.throw("Not completed 5 Hours")
+
+
+def shift_checkout():
+    employees = frappe.get_all(
+        "Employee Checkin",
+        filters=[
+            ["time", "between", [today(), add_to_date(today(), days=1, as_string=True)]],
+        ],
+        fields=[
+            "employee"
+        ],
+        group_by="employee"
+    )
+    for emp_check in employees:
+        emp_logs = frappe.db.get_list(
+            "Employee Checkin",
+            fields=[
+                "log_type",
+                "count(name) as count"
+            ],
+            filters=[
+                ["employee","=", emp_check.employee],
+                ["time", "between", [today(), add_to_date(today(), days=1, as_string=True)]],
+            ],
+            group_by="employee,log_type",
+            order_by="log_type",
+        )
+        if emp_logs[0]["count"] > emp_logs[1]["count"]:
+            for i in range(emp_logs[0]["count"]):
+                if emp_logs[0]["count"] == emp_logs[1]["count"]:
+                    break
+                else:
+                    shift_detail = frappe.get_doc(
+                        {
+                            "doctype": "Employee Checkin",
+                            "employee": emp_check.employee,
+                            "log_type": "OUT",
+                            "time": today(),
+                            "employee_name": emp_check.employee_name,
+                        }
+                    )
+                    shift_detail.insert()
