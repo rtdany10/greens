@@ -122,7 +122,7 @@ def shift_checkout():
             order_by="log_type",
         )
         if emp_logs[0]["count"] > emp_logs[1]["count"]:
-            for i in range(emp_logs[1]["count"]):
+            for i in range(emp_logs[0]["count"]):
                 if emp_logs[0]["count"] == emp_logs[1]["count"]:
                     break
                 else:
