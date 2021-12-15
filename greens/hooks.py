@@ -109,6 +109,7 @@ doc_events = {
 scheduler_events = {
     "daily": [
         "greens.tasks.shift_checkout"
+    ]
 }
 
 # Testing
