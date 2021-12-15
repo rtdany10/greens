@@ -100,6 +100,9 @@ app_license = "GPL v3"
 doc_events = {
     "Attendance": {
         "before_save": "greens.tasks.half_day",
+    },
+    "Salary Slip": {
+        "before_insert": "greens.tasks.get_working_on_holiday"
     }
 }
 # on_submit
@@ -166,3 +169,13 @@ scheduler_events = {
 # auth_hooks = [
 #     "greens.auth.validate"
 # ]
+
+# Fixtures
+fixtures = [
+    {
+        "dt": "Custom Field",
+        "filters": [
+            ["name", "in", ['Salary Slip-holiday_working']]
+        ]
+    }
+]
