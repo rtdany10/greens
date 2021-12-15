@@ -3,11 +3,12 @@
 
 import frappe
 from erpnext.hr.doctype.employee_checkin.employee_checkin import (
-    calculate_working_hours,
+	calculate_working_hours,
 )
 from erpnext.hr.utils import (
-    create_additional_leave_ledger_entry,
-    get_leave_allocations,
+	create_additional_leave_ledger_entry,
+	get_holiday_dates_for_employee,
+	get_leave_allocations,
 )
 from frappe.utils import (
 	add_to_date,
@@ -19,6 +20,27 @@ from frappe.utils import (
 )
 
 
+def get_working_on_holiday(doc, method=None):
+	holidays = get_holiday_dates_for_employee(doc.employee, doc.start_date, doc.end_date)
+	if holidays:
+		attendance = frappe.get_all("Attendance", filters={
+				"attendance_date": ["in", holidays],
+				"docstatus": 1,
+				"employee": doc.employee,
+				"status": ["in", ["Present", "Half Day"]]
+			},
+			fields=["COUNT(name) as count", "status"],
+			group_by="status"
+		)
+		if attendance:
+			holiday_working = 0
+			for d in attendance:
+				if d["status"] == "Present":
+					holiday_working += 1
+				else:
+					holiday_working += 0.5
+			doc.holiday_working = holiday_working
+			
 @frappe.whitelist()
 def allocate_leave():
 	today_date = today()
@@ -28,7 +50,7 @@ def allocate_leave():
 	employee = frappe.get_all("Attendance", filters={
 			"attendance_date": ["between", [month_start, today_date]],
 			"docstatus": 1,
-		}, 
+		},
 		fields=["DISTINCT(employee) as employee"]
 	)
 
@@ -65,51 +87,51 @@ def allocate_leave():
 	return
 
 def half_day(doc, method=None):
-    if doc.status == "Half Day":
-        logs = frappe.db.get_all(
-            "Employee Checkin",
-            fields="*",
-            filters=[
-                ["employee", "=", doc.employee],
-                ["time", "between", [today(), add_to_date(today(), days=1, as_string=True)]],
-            ],
-            order_by="employee,time",
-        )
-        total_working_hours = calculate_working_hours(
-            logs,
-            "Strictly based on Log Type in Employee Checkin",
-            "Every Valid Check-in and Check-out",
-        )[0]
-        if total_working_hours < 5:
-            frappe.throw("Minimum 5 hours of work time is required for half-day.")
+	if doc.status == "Half Day":
+		logs = frappe.db.get_all(
+			"Employee Checkin",
+			fields="*",
+			filters=[
+				["employee", "=", doc.employee],
+				["time", "between", [doc.attendance_date, add_to_date(doc.attendance_date, 1, True)]],
+			],
+			order_by="employee,time",
+		)
+		total_working_hours = calculate_working_hours(
+			logs,
+			"Strictly based on Log Type in Employee Checkin",
+			"Every Valid Check-in and Check-out",
+		)[0]
+		if total_working_hours < 5:
+			frappe.throw("Minimum 5 hours of work time is required for half-day.")
 
 def shift_checkout():
-    employees = frappe.get_all(
-        "Employee Checkin",
-        filters=[
-            ["time", "between", [today(), add_to_date(today(), days=1, as_string=True)]],
-        ],
-        fields=[
-            "employee"
-        ],
-        group_by="employee"
-    )
-    for emp_check in employees:
-        emp_logs = frappe.db.get_all(
-            "Employee Checkin",
-            fields=[
-                "log_type",
-                "count(name) as count"
-            ],
-            filters=[
-                ["employee","=", emp_check.employee],
-                ["time", "between", [today(), add_to_date(today(), days=1, as_string=True)]],
-            ],
-            group_by="employee,log_type",
-            order_by="log_type",
-        )
-        if emp_logs[0]["count"] > emp_logs[1]["count"]:
-            for i in range(int(emp_logs[0]["count"]) - int(emp_logs[1]["count"])):
+	employees = frappe.get_all(
+		"Employee Checkin",
+		filters=[
+			["time", "between", [add_to_date(today(), -1, True), today()]],
+		],
+		fields=[
+			"employee"
+		],
+		group_by="employee"
+	)
+	for emp_check in employees:
+		emp_logs = frappe.db.get_all(
+			"Employee Checkin",
+			fields=[
+				"log_type",
+				"count(name) as count"
+			],
+			filters=[
+				["employee", "=", emp_check.employee],
+				["time", "between", [add_to_date(today(), -1, True), today()]],
+			],
+			group_by="employee, log_type",
+			order_by="log_type",
+		)
+		if emp_logs[0]["count"] > emp_logs[1]["count"]:
+			for i in range(int(emp_logs[0]["count"]) - int(emp_logs[1]["count"])):
 				frappe.get_doc({
 						"doctype": "Employee Checkin",
 						"employee": emp_check.employee,
