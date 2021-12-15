@@ -9,7 +9,14 @@ from erpnext.hr.utils import (
     create_additional_leave_ledger_entry,
     get_leave_allocations,
 )
-from frappe.utils import add_to_date, flt, get_first_day, get_last_day, today
+from frappe.utils import (
+	add_to_date,
+	flt,
+	get_first_day,
+	get_last_day,
+	now,
+	today,
+)
 
 
 @frappe.whitelist()
@@ -59,11 +66,11 @@ def allocate_leave():
 
 def half_day(doc, method=None):
     if doc.status == "Half Day":
-        logs = frappe.db.get_list(
+        logs = frappe.db.get_all(
             "Employee Checkin",
             fields="*",
             filters=[
-                ["employee","=", doc.employee],
+                ["employee", "=", doc.employee],
                 ["time", "between", [today(), add_to_date(today(), days=1, as_string=True)]],
             ],
             order_by="employee,time",
@@ -71,11 +78,10 @@ def half_day(doc, method=None):
         total_working_hours = calculate_working_hours(
             logs,
             "Strictly based on Log Type in Employee Checkin",
-            "First Check-in and Last Check-out",
+            "Every Valid Check-in and Check-out",
         )[0]
-        if int(total_working_hours) < 5:
-            frappe.throw("Not completed 5 Hours")
-
+        if total_working_hours < 5:
+            frappe.throw("Minimum 5 hours of work time is required for half-day.")
 
 def shift_checkout():
     employees = frappe.get_all(
@@ -89,7 +95,7 @@ def shift_checkout():
         group_by="employee"
     )
     for emp_check in employees:
-        emp_logs = frappe.db.get_list(
+        emp_logs = frappe.db.get_all(
             "Employee Checkin",
             fields=[
                 "log_type",
@@ -103,17 +109,10 @@ def shift_checkout():
             order_by="log_type",
         )
         if emp_logs[0]["count"] > emp_logs[1]["count"]:
-            for i in range(emp_logs[0]["count"]):
-                if emp_logs[0]["count"] == emp_logs[1]["count"]:
-                    break
-                else:
-                    shift_detail = frappe.get_doc(
-                        {
-                            "doctype": "Employee Checkin",
-                            "employee": emp_check.employee,
-                            "log_type": "OUT",
-                            "time": today(),
-                            "employee_name": emp_check.employee_name,
-                        }
-                    )
-                    shift_detail.insert()
+            for i in range(int(emp_logs[0]["count"]) - int(emp_logs[1]["count"])):
+				frappe.get_doc({
+						"doctype": "Employee Checkin",
+						"employee": emp_check.employee,
+						"log_type": "OUT",
+						"time": now(),
+				}).insert(ignore_permissions=True)
