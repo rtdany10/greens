@@ -13,6 +13,7 @@ from erpnext.hr.utils import (
 from frappe.utils import (
 	add_to_date,
 	flt,
+	get_datetime,
 	get_first_day,
 	get_last_day,
 	now,
@@ -40,7 +41,20 @@ def get_working_on_holiday(doc, method=None):
 				else:
 					holiday_working += 0.5
 			doc.holiday_working = holiday_working
-			
+
+	ot_logs = frappe.get_all("Attendance", filters={
+			"attendance_date": ["between", [doc.start_date, doc.end_date]],
+			"docstatus": 1,
+			"employee": doc.employee,
+		},
+		fields=["SUM(ot_below_ten) as overtime", "SUM(ot_above_ten) as overtime_after_ten"],
+		group_by="employee",
+	)
+	if ot_logs:
+		doc.overtime = ot_logs[0]["overtime"]
+		doc.ot_after_ten = ot_logs[0]["overtime_after_ten"]
+
+
 @frappe.whitelist()
 def allocate_leave():
 	today_date = today()
@@ -87,29 +101,44 @@ def allocate_leave():
 	return
 
 def half_day(doc, method=None):
+	overtime = 0.00
+	logs = frappe.db.get_all("Employee Checkin", fields=["*"],
+		filters=[
+			["employee", "=", doc.employee],
+			["time", "between", [doc.attendance_date, add_to_date(doc.attendance_date, days=1)]],
+		],
+		order_by="time",
+	)
+
+	total_working_hours = calculate_working_hours(
+		logs,
+		"Strictly based on Log Type in Employee Checkin",
+		"Every Valid Check-in and Check-out",
+	)[0]
+
 	if doc.status == "Half Day":
-		logs = frappe.db.get_all(
-			"Employee Checkin",
-			fields="*",
-			filters=[
-				["employee", "=", doc.employee],
-				["time", "between", [doc.attendance_date, add_to_date(doc.attendance_date, 1, True)]],
-			],
-			order_by="employee,time",
-		)
-		total_working_hours = calculate_working_hours(
-			logs,
-			"Strictly based on Log Type in Employee Checkin",
-			"Every Valid Check-in and Check-out",
-		)[0]
 		if total_working_hours < 5:
 			frappe.throw("Minimum 5 hours of work time is required for half-day.")
+
+	if total_working_hours >= 10.5:
+		overtime += (total_working_hours - 9.5)
+		in_time = get_datetime(add_to_date(doc.attendance_date, hours=22))
+		if logs[-1].time > in_time:
+			ot_log = [d for d in logs if d.time >= in_time]
+			overtime_above_ten = calculate_working_hours(
+				ot_log,
+				"Strictly based on Log Type in Employee Checkin",
+				"Every Valid Check-in and Check-out",
+			)[0]
+			overtime -= overtime_above_ten
+			doc.ot_above_ten = overtime_above_ten
+		doc.ot_below_ten = overtime
 
 def shift_checkout():
 	employees = frappe.get_all(
 		"Employee Checkin",
 		filters=[
-			["time", "between", [add_to_date(today(), -1, True), today()]],
+			["time", "between", [add_to_date(today(), days=-1), today()]],
 		],
 		fields=[
 			"employee"
@@ -125,7 +154,7 @@ def shift_checkout():
 			],
 			filters=[
 				["employee", "=", emp_check.employee],
-				["time", "between", [add_to_date(today(), -1, True), today()]],
+				["time", "between", [add_to_date(today(), days=-1), today()]],
 			],
 			group_by="employee, log_type",
 			order_by="log_type",
