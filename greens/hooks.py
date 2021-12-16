@@ -99,10 +99,11 @@ app_license = "GPL v3"
 # Hook on document methods and events
 doc_events = {
     "Attendance": {
-        "before_save": "greens.tasks.half_day",
+        "validate": "greens.tasks.attendance",
+        "on_submit": "greens.tasks.allocate_leave"
     },
     "Salary Slip": {
-        "before_insert": "greens.tasks.get_working_on_holiday"
+        "before_insert": "greens.tasks.salary_slip"
     }
 }
 # on_submit
@@ -175,7 +176,16 @@ fixtures = [
     {
         "dt": "Custom Field",
         "filters": [
-            ["name", "in", ['Salary Slip-holiday_working']]
+            [
+                "name", "in", [
+                    "Salary Slip-holiday_working",
+                    "Attendance-ot_below_ten",
+                    "Attendance-ot_above_ten",
+                    "Salary Slip-overtime",
+                    "Salary Slip-ot_after_ten",
+                    "Salary Slip-is_retiring"
+                ]
+            ]
         ]
     }
 ]
