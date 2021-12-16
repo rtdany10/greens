@@ -176,7 +176,16 @@ fixtures = [
     {
         "dt": "Custom Field",
         "filters": [
-            ["name", "in", ['Salary Slip-holiday_working']]
+            [
+                "name", "in", [
+                    "Salary Slip-holiday_working",
+                    "Attendance-ot_below_ten",
+                    "Attendance-ot_above_ten",
+                    "Salary Slip-overtime",
+                    "Salary Slip-ot_after_ten",
+                    "Salary Slip-is_retiring"
+                ]
+            ]
         ]
     }
 ]
