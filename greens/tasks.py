@@ -76,10 +76,9 @@ def allocate_leave(doc, method=None):
 		order_by="status desc"
 	)
 
+	if not attendance:
+		return
 	marked_days = attendance[0].marked_days
-	# if len(attendance) > 1:
-	# 	marked_days += (attendance[1].marked_days/2)
-
 	if marked_days < 6:
 		return
 	earned_leaves = 1 if marked_days == 6 else (0.5 if marked_days % 3 == 0 else 0)
