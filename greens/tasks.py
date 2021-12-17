@@ -69,7 +69,7 @@ def allocate_leave(doc, method=None):
 			"attendance_date": ["between", [month_start, today_date]],
 			"docstatus": 1,
 			"employee": doc.employee,
-			"status": ["in", ["Present", "Half Day"]]
+			"status": ["in", ["Present"]]
 		},
 		fields=["COUNT(name) as marked_days"],
 		group_by="status",
@@ -77,14 +77,12 @@ def allocate_leave(doc, method=None):
 	)
 
 	marked_days = attendance[0].marked_days
-	if len(attendance) > 1:
-		marked_days += (attendance[1].marked_days/2)
+	# if len(attendance) > 1:
+	# 	marked_days += (attendance[1].marked_days/2)
 
 	if marked_days < 6:
 		return
-	earned_leaves = 1 if marked_days == 6 else 0
-	if marked_days in [9, 15, 21]:
-		earned_leaves = 1.5
+	earned_leaves = 1 if marked_days == 6 else (0.5 if marked_days % 3 == 0 else 0)
 	if not earned_leaves:
 		return
 
@@ -182,24 +180,28 @@ def shift_checkout():
 					"time": add_to_date(today(), days=-1, hours=23, minutes=59, seconds=59),
 				}).insert(ignore_permissions=True)
 
-		last_out = frappe.get_last_doc('Employee Checkin', filters=[
-				["employee", "=", emp.employee],
-				["time", "between", condition]
-			],
-			order_by="time desc"
-		).time
-		out_time = get_datetime(add_to_date(today(), days=-1, hours=22))
-		if last_out > out_time:
-			frappe.get_doc({
-				"doctype": "Employee Checkin",
-				"employee": emp.employee,
-				"log_type": "OUT",
-				"time": add_to_date(today(), days=-1, hours=21, minutes=59, seconds=59),
-			}).insert(ignore_permissions=True)
+def employee_checkout(doc, method=None):
+	doc_date = get_datetime(doc.time).date()
+	out_time = get_datetime(add_to_date(doc_date, hours=22))
+	if doc.log_type == "IN" or get_datetime(doc.time) < out_time:
+		return
+	last_in = frappe.get_last_doc('Employee Checkin', filters=[
+			["employee", "=", doc.employee],
+			["log_type", "=", "IN"],
+		],
+		order_by="time desc"
+	)
+	if last_in and last_in.time < out_time:
+		frappe.get_doc({
+			"doctype": "Employee Checkin",
+			"employee": doc.employee,
+			"log_type": "OUT",
+			"time": add_to_date(doc_date, hours=21, minutes=59, seconds=59),
+		}).insert(ignore_permissions=True)
 
-			frappe.get_doc({
-				"doctype": "Employee Checkin",
-				"employee": emp.employee,
-				"log_type": "IN",
-				"time": out_time,
-			}).insert(ignore_permissions=True)
+		frappe.get_doc({
+			"doctype": "Employee Checkin",
+			"employee": doc.employee,
+			"log_type": "IN",
+			"time": out_time,
+		}).insert(ignore_permissions=True)
