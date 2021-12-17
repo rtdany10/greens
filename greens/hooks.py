@@ -104,6 +104,9 @@ doc_events = {
     },
     "Salary Slip": {
         "before_insert": "greens.tasks.salary_slip"
+    },
+    "Employee Checkin": {
+        "before_insert": "greens.tasks.employee_checkout"
     }
 }
 # on_submit
