@@ -127,7 +127,7 @@ def attendance(doc, method=None):
 
 	total_working_hours = calculate_working_hours(
 		logs,
-		"Strictly based on Log Type in Employee Checkin",
+		"Alternating entries as IN and OUT during the same shift",
 		"Every Valid Check-in and Check-out",
 	)[0]
 
@@ -142,7 +142,7 @@ def attendance(doc, method=None):
 			ot_log = [d for d in logs if d.time >= in_time]
 			overtime_above_ten = calculate_working_hours(
 				ot_log,
-				"Strictly based on Log Type in Employee Checkin",
+				"Alternating entries as IN and OUT during the same shift",
 				"Every Valid Check-in and Check-out",
 			)[0]
 			overtime -= overtime_above_ten
@@ -154,53 +154,43 @@ def shift_checkout():
 	checkins = frappe.get_all("Employee Checkin", filters=[
 			["time", "between", condition],
 		],
-		fields=["employee"],
+		fields=["count(name) as count", "employee"],
 		group_by="employee"
 	)
 	for emp in checkins:
-		emp_logs = frappe.db.get_all("Employee Checkin", fields=[
-				"log_type",
-				"count(name) as count"
-			],
-			filters=[
-				["employee", "=", emp.employee],
-				["time", "between", condition],
-			],
-			group_by="employee, log_type",
-			order_by="log_type",
-		)
-		out_count = emp_logs[1]["count"] if len(emp_logs) > 1 else 0
-		if emp_logs[0]["count"] > out_count:
-			for i in range(int(emp_logs[0]["count"]) - int(out_count)):
-				frappe.get_doc({
-					"doctype": "Employee Checkin",
-					"employee": emp.employee,
-					"log_type": "OUT",
-					"time": add_to_date(today(), days=-1, hours=23, minutes=59, seconds=59),
-				}).insert(ignore_permissions=True)
+		if emp["count"] % 2 == 0:
+			continue
+		frappe.get_doc({
+			"doctype": "Employee Checkin",
+			"employee": emp["employee"],
+			"time": add_to_date(today(), days=-1, hours=23, minutes=59, seconds=59),
+		}).insert(ignore_permissions=True)
 
 def employee_checkout(doc, method=None):
 	doc_date = get_datetime(doc.time).date()
 	out_time = get_datetime(add_to_date(doc_date, hours=22))
-	if doc.log_type == "IN" or get_datetime(doc.time) < out_time:
+	if get_datetime(doc.time) < out_time:
 		return
-	last_in = frappe.get_last_doc('Employee Checkin', filters=[
-			["employee", "=", doc.employee],
-			["log_type", "=", "IN"],
-		],
-		order_by="time desc"
-	)
-	if last_in and last_in.time < out_time:
-		frappe.get_doc({
-			"doctype": "Employee Checkin",
-			"employee": doc.employee,
-			"log_type": "OUT",
-			"time": add_to_date(doc_date, hours=21, minutes=59, seconds=59),
-		}).insert(ignore_permissions=True)
+	try:
+		last_in = frappe.get_last_doc('Employee Checkin', filters=[
+				["employee", "=", doc.employee],
+			],
+			order_by="time desc"
+		)
+	except Exception:
+		return
+	else:
+		if last_in and last_in.time < out_time:
+			frappe.get_doc({
+				"doctype": "Employee Checkin",
+				"employee": doc.employee,
+				"log_type": "OUT",
+				"time": add_to_date(doc_date, hours=21, minutes=59, seconds=59),
+			}).insert(ignore_permissions=True)
 
-		frappe.get_doc({
-			"doctype": "Employee Checkin",
-			"employee": doc.employee,
-			"log_type": "IN",
-			"time": out_time,
-		}).insert(ignore_permissions=True)
+			frappe.get_doc({
+				"doctype": "Employee Checkin",
+				"employee": doc.employee,
+				"log_type": "IN",
+				"time": out_time,
+			}).insert(ignore_permissions=True)
