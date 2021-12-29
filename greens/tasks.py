@@ -115,44 +115,15 @@ def get_leave_allocations(emp, date, leave_type):
 			and leave_type=%s""",
 	(emp, date, leave_type), as_dict=1)
 
-def attendance(doc, method=None):
-	overtime = 0.00
-	logs = frappe.db.get_all("Employee Checkin", fields=["*"],
-		filters=[
-			["employee", "=", doc.employee],
-			["time", "between", [doc.attendance_date, add_to_date(doc.attendance_date, days=1)]],
-		],
-		order_by="time",
-	)
-
-	total_working_hours = calculate_working_hours(
-		logs,
-		"Alternating entries as IN and OUT during the same shift",
-		"Every Valid Check-in and Check-out",
-	)[0]
-
-	if doc.status == "Half Day":
-		if total_working_hours < 5:
-			frappe.throw("Minimum 5 hours of work time is required for half-day.")
-
-	if total_working_hours >= 10.5:
-		overtime += (total_working_hours - 9.5)
-		in_time = get_datetime(add_to_date(doc.attendance_date, hours=22))
-		if logs[-1].time > in_time:
-			ot_log = [d for d in logs if d.time >= in_time]
-			overtime_above_ten = calculate_working_hours(
-				ot_log,
-				"Alternating entries as IN and OUT during the same shift",
-				"Every Valid Check-in and Check-out",
-			)[0]
-			overtime -= overtime_above_ten
-			doc.ot_above_ten = overtime_above_ten
-		doc.ot_below_ten = overtime if overtime > 0 else 0
+def daily_attendance():
+	shift_checkout()
+	mark_attendance()
 
 def shift_checkout():
 	condition = [add_to_date(today(), days=-1), today()]
 	checkins = frappe.get_all("Employee Checkin", filters=[
 			["time", "between", condition],
+			["shift_end", "not in", ["", None]],
 		],
 		fields=["count(name) as count", "employee"],
 		group_by="employee"
@@ -163,13 +134,60 @@ def shift_checkout():
 		frappe.get_doc({
 			"doctype": "Employee Checkin",
 			"employee": emp["employee"],
-			"time": add_to_date(today(), days=-1, hours=23, minutes=59, seconds=59),
+			"time": doc.shift_end
 		}).insert(ignore_permissions=True)
+
+def mark_attendance():
+	attendance = frappe.db.get_all("Attendance",
+		filters={
+			'attendance_date': add_to_date(today(), days=-1),
+			'docstatus': 0
+		}, pluck="name"
+	)
+	for att in attendance:
+		overtime = 0.00
+		doc = frappe.get_doc("Attendance", att)
+		logs = frappe.db.get_all("Employee Checkin", fields=["*"],
+			filters=[
+				["employee", "=", doc.employee],
+				["time", "between", [doc.attendance_date, add_to_date(doc.attendance_date, days=1)]],
+			],
+			order_by="time",
+		)
+		total_working_hours = calculate_working_hours(
+			logs,
+			"Alternating entries as IN and OUT during the same shift",
+			"Every Valid Check-in and Check-out",
+		)[0]
+
+		if total_working_hours >= 5:
+			doc.status = "Present" if total_working_hours >= 9.5 else "Half Day"
+			if total_working_hours >= 10.5:
+				overtime += (total_working_hours - 9.5)
+				in_time = get_datetime(add_to_date(doc.attendance_date, hours=22))
+				if logs[-1].time > in_time:
+					ot_log = [d for d in logs if d.time >= in_time]
+					overtime_above_ten = calculate_working_hours(
+						ot_log,
+						"Alternating entries as IN and OUT during the same shift",
+						"Every Valid Check-in and Check-out",
+					)[0]
+					overtime -= overtime_above_ten
+					doc.ot_above_ten = overtime_above_ten
+				doc.ot_below_ten = overtime if overtime > 0 else 0
+			else:
+				doc.submit()
+				continue
+		else:
+			doc.status = "Absent"
+		doc.working_hours = total_working_hours
+		doc.save()
 
 def employee_checkout(doc, method=None):
 	doc_date = get_datetime(doc.time).date()
+	link_attendance(doc, doc_date)
 	out_time = get_datetime(add_to_date(doc_date, hours=22))
-	if get_datetime(doc.time) < out_time:
+	if doc.log_type or get_datetime(doc.time) < out_time:
 		return
 	try:
 		last_in = frappe.get_last_doc('Employee Checkin', filters=[
@@ -194,3 +212,22 @@ def employee_checkout(doc, method=None):
 				"log_type": "IN",
 				"time": out_time,
 			}).insert(ignore_permissions=True)
+
+def link_attendance(doc, attendance_date):
+	try:
+		attendance = frappe.get_last_doc('Attendance', filters={
+			'employee': doc.employee,
+			'attendance_date': attendance_date,
+			'docstatus': ('!=', '2')
+		})
+	except Exception:
+		attendance = frappe.get_doc({
+			'doctype': 'Attendance',
+			'employee': doc.employee,
+			'attendance_date': attendance_date,
+			'status': "Present",
+			'company': frappe.db.get_value('Employee', doc.employee, 'company'),
+			'shift': doc.shift,
+		}).insert(ignore_permissions=True)
+	finally:
+		doc.attendance = attendance.name

@@ -99,7 +99,6 @@ app_license = "GPL v3"
 # Hook on document methods and events
 doc_events = {
     "Attendance": {
-        "validate": "greens.tasks.attendance",
         "on_submit": "greens.tasks.allocate_leave"
     },
     "Salary Slip": {
@@ -114,8 +113,8 @@ doc_events = {
 # ---------------
 
 scheduler_events = {
-    "daily": [
-        "greens.tasks.shift_checkout"
+    "daily_long": [
+        "greens.tasks.daily_attendance"
     ]
 }
 
