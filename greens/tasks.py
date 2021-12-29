@@ -118,6 +118,11 @@ def get_leave_allocations(emp, date, leave_type):
 def daily_attendance():
 	shift_checkout()
 	mark_attendance()
+	shift_list = frappe.get_all('Shift Type', pluck='name')
+	for shift in shift_list:
+		doc = frappe.get_doc('Shift Type', shift)
+		for employee in doc.get_assigned_employee(doc.process_attendance_after, True):
+			doc.mark_absent_for_dates_with_no_attendance(employee)
 
 def shift_checkout():
 	condition = [add_to_date(today(), days=-1), today()]
