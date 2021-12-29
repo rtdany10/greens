@@ -162,7 +162,7 @@ def shift_checkout():
 			continue
 		frappe.get_doc({
 			"doctype": "Employee Checkin",
-			"employee": emp.employee,
+			"employee": emp["employee"],
 			"time": add_to_date(today(), days=-1, hours=23, minutes=59, seconds=59),
 		}).insert(ignore_permissions=True)
 
