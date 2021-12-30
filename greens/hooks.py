@@ -186,7 +186,8 @@ fixtures = [
                     "Attendance-ot_above_ten",
                     "Salary Slip-overtime",
                     "Salary Slip-ot_after_ten",
-                    "Salary Slip-is_retiring"
+                    "Salary Slip-is_retiring",
+                    "Employee Checkin-auto_checkout"
                 ]
             ]
         ]
