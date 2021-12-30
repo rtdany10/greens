@@ -125,12 +125,12 @@ def daily_attendance():
 			doc.mark_absent_for_dates_with_no_attendance(employee)
 
 def shift_checkout():
-	condition = [add_to_date(today(), days=-1), today()]
+	yesterday = add_to_date(today(), days=-1)
 	checkins = frappe.get_all("Employee Checkin", filters=[
-			["time", "between", condition],
+			["time", "between", [yesterday, yesterday]],
 			["shift_end", "not in", ["", None]],
 		],
-		fields=["count(name) as count", "employee"],
+		fields=["count(name) as count", "employee", "shift_end"],
 		group_by="employee"
 	)
 	for emp in checkins:
@@ -139,7 +139,8 @@ def shift_checkout():
 		frappe.get_doc({
 			"doctype": "Employee Checkin",
 			"employee": emp["employee"],
-			"time": doc.shift_end
+			"time": emp["shift_end"],
+			"auto_checkout": 1
 		}).insert(ignore_permissions=True)
 
 def mark_attendance():
@@ -155,7 +156,7 @@ def mark_attendance():
 		logs = frappe.db.get_all("Employee Checkin", fields=["*"],
 			filters=[
 				["employee", "=", doc.employee],
-				["time", "between", [doc.attendance_date, add_to_date(doc.attendance_date, days=1)]],
+				["time", "between", [doc.attendance_date, doc.attendance_date]],
 			],
 			order_by="time",
 		)
@@ -186,6 +187,8 @@ def mark_attendance():
 		else:
 			doc.status = "Absent"
 		doc.working_hours = total_working_hours
+		doc.late_entry = 1 if logs[0].time > logs[0].shift_start else 0
+		doc.early_exit = 1 if logs[0].time < logs[-1].shift_end else 0
 		doc.save()
 
 def employee_checkout(doc, method=None):
