@@ -190,7 +190,6 @@ def mark_attendance():
 
 def employee_checkout(doc, method=None):
 	doc_date = get_datetime(doc.time).date()
-	link_attendance(doc, doc_date)
 	out_time = get_datetime(add_to_date(doc_date, hours=22))
 	if doc.log_type or get_datetime(doc.time) < out_time:
 		return
@@ -218,7 +217,8 @@ def employee_checkout(doc, method=None):
 				"time": out_time,
 			}).insert(ignore_permissions=True)
 
-def link_attendance(doc, attendance_date):
+def link_attendance(doc, method=None):
+	attendance_date = get_datetime(doc.time).date()
 	try:
 		attendance = frappe.get_last_doc('Attendance', filters={
 			'employee': doc.employee,
@@ -235,4 +235,4 @@ def link_attendance(doc, attendance_date):
 			'shift': doc.shift,
 		}).insert(ignore_permissions=True)
 	finally:
-		doc.attendance = attendance.name
+		frappe.db.set_value(doc.doctype, doc.name, 'attendance', attendance.name)
