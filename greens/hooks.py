@@ -105,7 +105,8 @@ doc_events = {
         "before_insert": "greens.tasks.salary_slip"
     },
     "Employee Checkin": {
-        "before_insert": "greens.tasks.employee_checkout"
+        "before_insert": "greens.tasks.employee_checkout",
+        "after_insert": "greens.tasks.link_attendance"
     }
 }
 # on_submit
