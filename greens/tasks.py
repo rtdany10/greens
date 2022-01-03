@@ -116,19 +116,21 @@ def get_leave_allocations(emp, date, leave_type):
 	(emp, date, leave_type), as_dict=1)
 
 def daily_attendance():
-	shift_checkout()
-	mark_attendance()
-	shift_list = frappe.get_all('Shift Type', pluck='name')
-	for shift in shift_list:
-		doc = frappe.get_doc('Shift Type', shift)
-		for employee in doc.get_assigned_employee(doc.process_attendance_after, True):
-			doc.mark_absent_for_dates_with_no_attendance(employee)
+	try:
+		shift_checkout()
+		mark_attendance()
+		shift_list = frappe.get_all('Shift Type', pluck='name')
+		for shift in shift_list:
+			doc = frappe.get_doc('Shift Type', shift)
+			for employee in doc.get_assigned_employee(doc.process_attendance_after, True):
+				doc.mark_absent_for_dates_with_no_attendance(employee)
+	except Exception as e:
+		frappe.log_error(str(e), "Daily Attendance Error")
 
 def shift_checkout():
 	yesterday = add_to_date(today(), days=-1)
 	checkins = frappe.get_all("Employee Checkin", filters=[
 			["time", "between", [yesterday, yesterday]],
-			["shift_end", "not in", ["", None]],
 		],
 		fields=["count(name) as count", "employee", "shift_end"],
 		group_by="employee"
@@ -139,7 +141,7 @@ def shift_checkout():
 		frappe.get_doc({
 			"doctype": "Employee Checkin",
 			"employee": emp["employee"],
-			"time": emp["shift_end"],
+			"time": emp["shift_end"] or add_to_date(yesterday, hours=22),
 			"auto_checkout": 1
 		}).insert(ignore_permissions=True)
 
@@ -182,13 +184,22 @@ def mark_attendance():
 					doc.ot_above_ten = overtime_above_ten
 				doc.ot_below_ten = overtime if overtime > 0 else 0
 			else:
+				doc.working_hours = total_working_hours
+				for log in logs:
+					if log.shift:
+						doc.late_entry = 1 if logs[0].time > log.shift_start else 0
+						doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
+						break
 				doc.submit()
 				continue
 		else:
 			doc.status = "Absent"
 		doc.working_hours = total_working_hours
-		doc.late_entry = 1 if logs[0].time > logs[0].shift_start else 0
-		doc.early_exit = 1 if logs[0].time < logs[-1].shift_end else 0
+		for log in logs:
+			if log.shift:
+				doc.late_entry = 1 if logs[0].time > log.shift_start else 0
+				doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
+				break
 		doc.save()
 
 def employee_checkout(doc, method=None):
