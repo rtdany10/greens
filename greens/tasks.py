@@ -138,12 +138,16 @@ def shift_checkout():
 	for emp in checkins:
 		if emp["count"] % 2 == 0:
 			continue
-		frappe.get_doc({
-			"doctype": "Employee Checkin",
-			"employee": emp["employee"],
-			"time": emp["shift_end"] or add_to_date(yesterday, hours=22),
-			"auto_checkout": 1
-		}).insert(ignore_permissions=True)
+		try:
+			frappe.get_doc({
+				"doctype": "Employee Checkin",
+				"employee": emp["employee"],
+				"time": emp["shift_end"] or add_to_date(yesterday, hours=22),
+				"auto_checkout": 1
+			}).insert(ignore_permissions=True)
+		except Exception as e:
+			frappe.log_error(str(e), "Daily Shift Checkout Error")
+			continue
 
 def mark_attendance():
 	attendance = frappe.db.get_all("Attendance",
@@ -153,59 +157,63 @@ def mark_attendance():
 		}, pluck="name"
 	)
 	for att in attendance:
-		overtime = 0.00
-		doc = frappe.get_doc("Attendance", att)
-		logs = frappe.db.get_all("Employee Checkin", fields=["*"],
-			filters=[
-				["employee", "=", doc.employee],
-				["time", "between", [doc.attendance_date, doc.attendance_date]],
-			],
-			order_by="time",
-		)
-		total_working_hours = calculate_working_hours(
-			logs,
-			"Alternating entries as IN and OUT during the same shift",
-			"Every Valid Check-in and Check-out",
-		)[0]
+		try:
+			overtime = 0.00
+			doc = frappe.get_doc("Attendance", att)
+			logs = frappe.db.get_all("Employee Checkin", fields=["*"],
+				filters=[
+					["employee", "=", doc.employee],
+					["time", "between", [doc.attendance_date, doc.attendance_date]],
+				],
+				order_by="time",
+			)
+			total_working_hours = calculate_working_hours(
+				logs,
+				"Alternating entries as IN and OUT during the same shift",
+				"Every Valid Check-in and Check-out",
+			)[0]
 
-		if total_working_hours >= 5:
-			doc.status = "Present" if total_working_hours >= 9.5 else "Half Day"
-			if total_working_hours >= 10.5:
-				overtime += (total_working_hours - 9.5)
-				in_time = get_datetime(add_to_date(doc.attendance_date, hours=22))
-				if logs[-1].time > in_time:
-					ot_log = [d for d in logs if d.time >= in_time]
-					overtime_above_ten = calculate_working_hours(
-						ot_log,
-						"Alternating entries as IN and OUT during the same shift",
-						"Every Valid Check-in and Check-out",
-					)[0]
-					overtime -= overtime_above_ten
-					doc.ot_above_ten = overtime_above_ten
-				doc.ot_below_ten = overtime if overtime > 0 else 0
+			if total_working_hours >= 5:
+				doc.status = "Present" if total_working_hours >= 9.5 else "Half Day"
+				if total_working_hours >= 10.5:
+					overtime += (total_working_hours - 9.5)
+					in_time = get_datetime(add_to_date(doc.attendance_date, hours=22))
+					if logs[-1].time > in_time:
+						ot_log = [d for d in logs if d.time >= in_time]
+						overtime_above_ten = calculate_working_hours(
+							ot_log,
+							"Alternating entries as IN and OUT during the same shift",
+							"Every Valid Check-in and Check-out",
+						)[0]
+						overtime -= overtime_above_ten
+						doc.ot_above_ten = overtime_above_ten
+					doc.ot_below_ten = overtime if overtime > 0 else 0
+				else:
+					doc.working_hours = total_working_hours
+					for log in logs:
+						if log.shift:
+							doc.late_entry = 1 if logs[0].time > log.shift_start else 0
+							doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
+							break
+					doc.submit()
+					continue
 			else:
-				doc.working_hours = total_working_hours
-				for log in logs:
-					if log.shift:
-						doc.late_entry = 1 if logs[0].time > log.shift_start else 0
-						doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
-						break
-				doc.submit()
-				continue
-		else:
-			doc.status = "Absent"
-		doc.working_hours = total_working_hours
-		for log in logs:
-			if log.shift:
-				doc.late_entry = 1 if logs[0].time > log.shift_start else 0
-				doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
-				break
-		doc.save()
+				doc.status = "Absent"
+			doc.working_hours = total_working_hours
+			for log in logs:
+				if log.shift:
+					doc.late_entry = 1 if logs[0].time > log.shift_start else 0
+					doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
+					break
+			doc.save()
+		except Exception as e:
+			frappe.log_error(str(e), "Daily Attendance Marking Error")
+			continue
 
 def employee_checkout(doc, method=None):
 	doc_date = get_datetime(doc.time).date()
 	out_time = get_datetime(add_to_date(doc_date, hours=22))
-	if doc.log_type or get_datetime(doc.time) < out_time:
+	if doc.log_type or get_datetime(doc.time) <= out_time:
 		return
 	try:
 		last_in = frappe.get_last_doc('Employee Checkin', filters=[
