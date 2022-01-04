@@ -119,11 +119,11 @@ def daily_attendance():
 	try:
 		shift_checkout()
 		mark_attendance()
-		shift_list = frappe.get_all('Shift Type', pluck='name')
-		for shift in shift_list:
-			doc = frappe.get_doc('Shift Type', shift)
-			for employee in doc.get_assigned_employee(doc.process_attendance_after, True):
-				doc.mark_absent_for_dates_with_no_attendance(employee)
+		# shift_list = frappe.get_all('Shift Type', pluck='name')
+		# for shift in shift_list:
+		# 	doc = frappe.get_doc('Shift Type', shift)
+		# 	for employee in doc.get_assigned_employee(doc.process_attendance_after, True):
+		# 		doc.mark_absent_for_dates_with_no_attendance(employee)
 	except Exception as e:
 		frappe.log_error(str(e), "Daily Attendance Error")
 

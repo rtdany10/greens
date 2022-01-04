@@ -114,7 +114,7 @@ doc_events = {
 # ---------------
 
 scheduler_events = {
-    "daily_long": [
+    "hourly_long": [
         "greens.tasks.daily_attendance"
     ]
 }
