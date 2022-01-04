@@ -2,13 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
-from erpnext.hr.doctype.employee_checkin.employee_checkin import (
-	calculate_working_hours,
-)
-from erpnext.hr.utils import (
-	create_additional_leave_ledger_entry,
-	get_holiday_dates_for_employee,
-)
+from frappe import enqueue
 from frappe.utils import (
 	add_to_date,
 	flt,
@@ -18,6 +12,14 @@ from frappe.utils import (
 	month_diff,
 	now,
 	today,
+)
+
+from erpnext.hr.doctype.employee_checkin.employee_checkin import (
+	calculate_working_hours,
+)
+from erpnext.hr.utils import (
+	create_additional_leave_ledger_entry,
+	get_holiday_dates_for_employee,
 )
 
 
@@ -240,6 +242,10 @@ def employee_checkout(doc, method=None):
 			}).insert(ignore_permissions=True)
 
 def link_attendance(doc, method=None):
+	enqueue("greens.tasks.link_attendance_bg", docname=doc.name)
+
+def link_attendance_bg(docname):
+	doc = frappe.get_doc("Employee Checkin", docname)
 	attendance_date = get_datetime(doc.time).date()
 	try:
 		attendance = frappe.get_last_doc('Attendance', filters={
@@ -257,4 +263,4 @@ def link_attendance(doc, method=None):
 			'shift': doc.shift,
 		}).insert(ignore_permissions=True)
 	finally:
-		frappe.db.set_value(doc.doctype, doc.name, 'attendance', attendance.name)
+		frappe.db.set_value("Employee Checkin", doc.name, 'attendance', attendance.name)
