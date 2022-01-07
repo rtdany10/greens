@@ -11,7 +11,8 @@ class ConsolidatedAttendanceMarking(Document):
 			frappe.throw("Only allowed to process attendance till yesterday.")
 
 		attendance = frappe.db.get_all('Attendance', filters={
-			'workflow_state': 'Pending'
+			'workflow_state': 'Pending',
+			'attendance_date': self.attendance_date
 		}, pluck='name')
 
 		if not attendance:
