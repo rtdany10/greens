@@ -187,7 +187,8 @@ fixtures = [
                     "Salary Slip-overtime",
                     "Salary Slip-ot_after_ten",
                     "Salary Slip-is_retiring",
-                    "Employee Checkin-auto_checkout"
+                    "Employee Checkin-auto_checkout",
+                    "Attendance-processed",
                 ]
             ]
         ]

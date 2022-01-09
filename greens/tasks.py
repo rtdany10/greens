@@ -154,7 +154,8 @@ def shift_checkout():
 def mark_attendance():
 	attendance = frappe.db.get_all("Attendance",
 		filters={
-			'attendance_date': add_to_date(today(), days=-1),
+			'attendance_date': [">=", "2022-01-08"],
+			'processed': 0,
 			'docstatus': 0
 		}, pluck="name"
 	)
@@ -192,6 +193,7 @@ def mark_attendance():
 					doc.ot_below_ten = overtime if overtime > 0 else 0
 				else:
 					doc.working_hours = total_working_hours
+					doc.processed = 1
 					for log in logs:
 						if log.shift:
 							doc.late_entry = 1 if logs[0].time > log.shift_start else 0
@@ -202,6 +204,7 @@ def mark_attendance():
 			else:
 				doc.status = "Absent"
 			doc.working_hours = total_working_hours
+			doc.processed = 1
 			for log in logs:
 				if log.shift:
 					doc.late_entry = 1 if logs[0].time > log.shift_start else 0
@@ -226,7 +229,16 @@ def employee_checkout(doc, method=None):
 	except Exception:
 		return
 	else:
-		if last_in and last_in.time < out_time:
+		checkins = frappe.get_all("Employee Checkin", filters=[
+				["time", "between", [doc_date, doc_date]],
+				["employee", "=", doc.employee],
+			],
+			fields=["count(name) as count"],
+			group_by="employee"
+		)
+		if checkins and checkins[0]["count"] % 2 == 0:
+			return
+		if last_in.time < out_time:
 			frappe.get_doc({
 				"doctype": "Employee Checkin",
 				"employee": doc.employee,
@@ -242,7 +254,8 @@ def employee_checkout(doc, method=None):
 			}).insert(ignore_permissions=True)
 
 def link_attendance(doc, method=None):
-	enqueue("greens.tasks.link_attendance_bg", docname=doc.name)
+	if not doc.log_type:
+		enqueue("greens.tasks.link_attendance_bg", enqueue_after_commit=True, docname=doc.name)
 
 def link_attendance_bg(docname):
 	doc = frappe.get_doc("Employee Checkin", docname)
