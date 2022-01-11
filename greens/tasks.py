@@ -2,7 +2,7 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
-from frappe import enqueue
+from frappe.query_builder.functions import Count
 from frappe.utils import (
 	add_to_date,
 	flt,
@@ -119,6 +119,7 @@ def get_leave_allocations(emp, date, leave_type):
 
 def daily_attendance():
 	try:
+		link_attendance()
 		shift_checkout()
 		mark_attendance()
 		# shift_list = frappe.get_all('Shift Type', pluck='name')
@@ -128,6 +129,33 @@ def daily_attendance():
 		# 		doc.mark_absent_for_dates_with_no_attendance(employee)
 	except Exception as e:
 		frappe.log_error(str(e), "Daily Attendance Error")
+
+def link_attendance():
+	yesterday = add_to_date(today(), days=-1)
+	checkins = frappe.get_all("Employee Checkin", filters=[
+			["time", "between", [yesterday, yesterday]],
+			["attendance", "in", ["", None]],
+		],
+		fields=["name", "employee", "shift"],
+	)
+	for doc in checkins:
+		try:
+			attendance = frappe.get_last_doc('Attendance', filters={
+				'employee': doc.employee,
+				'attendance_date': today(),
+				'docstatus': ('!=', '2')
+			})
+		except Exception:
+			attendance = frappe.get_doc({
+				'doctype': 'Attendance',
+				'employee': doc.employee,
+				'attendance_date': today(),
+				'status': "Present",
+				'company': frappe.db.get_value('Employee', doc.employee, 'company'),
+				'shift': doc.shift,
+			}).insert(ignore_permissions=True)
+		finally:
+			frappe.db.set_value("Employee Checkin", doc.name, 'attendance', attendance.name)
 
 def shift_checkout():
 	yesterday = add_to_date(today(), days=-1)
@@ -253,27 +281,10 @@ def employee_checkout(doc, method=None):
 				"time": out_time,
 			}).insert(ignore_permissions=True)
 
-def link_attendance(doc, method=None):
-	if not doc.log_type:
-		enqueue("greens.tasks.link_attendance_bg", enqueue_after_commit=True, docname=doc.name)
-
-def link_attendance_bg(docname):
-	doc = frappe.get_doc("Employee Checkin", docname)
-	attendance_date = get_datetime(doc.time).date()
-	try:
-		attendance = frappe.get_last_doc('Attendance', filters={
-			'employee': doc.employee,
-			'attendance_date': attendance_date,
-			'docstatus': ('!=', '2')
-		})
-	except Exception:
-		attendance = frappe.get_doc({
-			'doctype': 'Attendance',
-			'employee': doc.employee,
-			'attendance_date': attendance_date,
-			'status': "Present",
-			'company': frappe.db.get_value('Employee', doc.employee, 'company'),
-			'shift': doc.shift,
-		}).insert(ignore_permissions=True)
-	finally:
-		frappe.db.set_value("Employee Checkin", doc.name, 'attendance', attendance.name)
+def clear_duplicate_checkin():
+	checkin = frappe.qb.DocType('Employee Checkin')
+	duplicate = frappe.qb.from_(checkin).select(checkin.name)\
+		.groupby(checkin.time).groupby(checkin.employee)\
+		.having(Count(checkin.name)>1).run(as_dict=True)
+	for d in duplicate:
+		frappe.delete_doc('Employee Checkin', d.name, ignore_missing=True, force=True)

@@ -106,7 +106,6 @@ doc_events = {
     },
     "Employee Checkin": {
         "before_insert": "greens.tasks.employee_checkout",
-        "after_insert": "greens.tasks.link_attendance"
     }
 }
 # on_submit
@@ -114,6 +113,9 @@ doc_events = {
 # ---------------
 
 scheduler_events = {
+    "hourly": [
+        "greens.tasks.clear_duplicate_checkin"
+    ],
     "daily_long": [
         "greens.tasks.daily_attendance"
     ]
