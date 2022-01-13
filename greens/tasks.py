@@ -142,14 +142,14 @@ def link_attendance():
 		try:
 			attendance = frappe.get_last_doc('Attendance', filters={
 				'employee': doc.employee,
-				'attendance_date': today(),
+				'attendance_date': yesterday,
 				'docstatus': ('!=', '2')
 			})
 		except Exception:
 			attendance = frappe.get_doc({
 				'doctype': 'Attendance',
 				'employee': doc.employee,
-				'attendance_date': today(),
+				'attendance_date': yesterday,
 				'status': "Present",
 				'company': frappe.db.get_value('Employee', doc.employee, 'company'),
 				'shift': doc.shift,
