@@ -182,7 +182,7 @@ def shift_checkout():
 def mark_attendance():
 	attendance = frappe.db.get_all("Attendance",
 		filters={
-			'attendance_date': [">=", "2022-01-08"],
+			'attendance_date': [">=", "2022-01-11"],
 			'processed': 0,
 			'docstatus': 0
 		}, pluck="name"
