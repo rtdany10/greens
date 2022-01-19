@@ -1,21 +1,32 @@
+
 name: Linters
 
 on:
-  pull_request_target:
-    types: [assigned, opened, synchronize, reopened]
+  pull_request: { }
 
 jobs:
-  build:
-    name: Lint Code Base
+
+  linters:
+    name: linters
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v2
 
-      - name: flake8
-        uses: tayfun/flake8-your-pr@1.0.1
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install and Run Pre-commit
+        uses: pre-commit/action@v2.0.3
+
+      - name: Download Semgrep rules
+        run: git clone --depth 1 https://github.com/frappe/semgrep-rules.git frappe-semgrep-rules
+
+      - uses: returntocorp/semgrep-action@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            SEMGREP_TIMEOUT: 120
+        with:
+            config: >-
+              r/python.lang.correctness
+              ./frappe-semgrep-rules/rules
