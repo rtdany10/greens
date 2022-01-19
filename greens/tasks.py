@@ -1,26 +1,14 @@
-# Copyright (c) 2021, Wahni Green Technologies Pvt. Ltd. and Contributors
+# Copyright (c) 2022, Wahni Green Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
 import frappe
+from erpnext.hr.doctype.employee_checkin.employee_checkin import \
+				calculate_working_hours
+from erpnext.hr.utils import (create_additional_leave_ledger_entry,
+                              get_holiday_dates_for_employee)
 from frappe.query_builder.functions import Count
-from frappe.utils import (
-	add_to_date,
-	flt,
-	get_datetime,
-	get_first_day,
-	get_last_day,
-	month_diff,
-	now,
-	today,
-)
-
-from erpnext.hr.doctype.employee_checkin.employee_checkin import (
-	calculate_working_hours,
-)
-from erpnext.hr.utils import (
-	create_additional_leave_ledger_entry,
-	get_holiday_dates_for_employee,
-)
+from frappe.utils import (add_to_date, flt, get_datetime, get_first_day,
+                          get_last_day, month_diff, today)
 
 
 def salary_slip(doc, method=None):
@@ -205,7 +193,7 @@ def mark_attendance():
 			)[0]
 
 			if total_working_hours >= 5:
-				doc.status = "Present" if total_working_hours >= 9.5 else "Half Day"
+				doc.status = "Present" if total_working_hours >= 7 else "Half Day"
 				if total_working_hours >= 10.5:
 					overtime += (total_working_hours - 9.5)
 					in_time = get_datetime(add_to_date(doc.attendance_date, hours=22))
@@ -221,26 +209,27 @@ def mark_attendance():
 					doc.ot_below_ten = overtime if overtime > 0 else 0
 				else:
 					doc.working_hours = total_working_hours
+					if total_working_hours < 9.5:
+						for log in logs:
+							if log.shift:
+								doc.late_entry = 1 if logs[0].time > log.shift_start else 0
+								doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
+								break
 					doc.processed = 1
-					for log in logs:
-						if log.shift:
-							doc.late_entry = 1 if logs[0].time > log.shift_start else 0
-							doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
-							break
 					doc.submit()
 					continue
 			else:
 				doc.status = "Absent"
+				for log in logs:
+					if log.shift:
+						doc.late_entry = 1 if logs[0].time > log.shift_start else 0
+						doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
+						break
 			doc.working_hours = total_working_hours
 			doc.processed = 1
-			for log in logs:
-				if log.shift:
-					doc.late_entry = 1 if logs[0].time > log.shift_start else 0
-					doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
-					break
 			doc.save()
 		except Exception as e:
-			frappe.log_error(str(e), "Daily Attendance Marking Error")
+			frappe.log_error(str(e), "Daily Attendance Marking Error - " + str(att))
 			continue
 
 def employee_checkout(doc, method=None):
