@@ -3,12 +3,21 @@
 
 import frappe
 from erpnext.hr.doctype.employee_checkin.employee_checkin import \
-				calculate_working_hours
-from erpnext.hr.utils import (create_additional_leave_ledger_entry,
-                              get_holiday_dates_for_employee)
+	calculate_working_hours
+from erpnext.hr.utils import (
+	create_additional_leave_ledger_entry,
+	get_holiday_dates_for_employee
+)
 from frappe.query_builder.functions import Count
-from frappe.utils import (add_to_date, flt, get_datetime, get_first_day,
-                          get_last_day, month_diff, today)
+from frappe.utils import (
+	add_to_date,
+	flt,
+	get_datetime,
+	get_first_day,
+	get_last_day,
+	month_diff,
+	today
+)
 
 
 def salary_slip(doc, method=None):
@@ -18,14 +27,11 @@ def salary_slip(doc, method=None):
 	holidays = get_holiday_dates_for_employee(doc.employee, doc.start_date, doc.end_date)
 	if holidays:
 		attendance = frappe.get_all("Attendance", filters={
-				"attendance_date": ["in", holidays],
-				"docstatus": 1,
-				"employee": doc.employee,
-				"status": ["in", ["Present", "Half Day"]]
-			},
-			fields=["COUNT(name) as count", "status"],
-			group_by="status"
-		)
+			"attendance_date": ["in", holidays],
+			"docstatus": 1,
+			"employee": doc.employee,
+			"status": ["in", ["Present", "Half Day"]]
+		}, fields=["COUNT(name) as count", "status"], group_by="status")
 		if attendance:
 			holiday_working = 0
 			for d in attendance:
@@ -36,19 +42,17 @@ def salary_slip(doc, method=None):
 			doc.holiday_working = holiday_working
 
 	ot_logs = frappe.get_all("Attendance", filters={
-			"attendance_date": ["between", [doc.start_date, doc.end_date]],
-			"docstatus": 1,
-			"employee": doc.employee,
-		},
-		fields=["SUM(ot_below_ten) as overtime", "SUM(ot_above_ten) as overtime_after_ten"],
-		group_by="employee",
-	)
+		"attendance_date": ["between", [doc.start_date, doc.end_date]],
+		"docstatus": 1,
+		"employee": doc.employee,
+	}, fields=["SUM(ot_below_ten) as overtime", "SUM(ot_above_ten) as overtime_after_ten"], group_by="employee")
 	if ot_logs:
 		doc.overtime = ot_logs[0]["overtime"]
 		doc.ot_after_ten = ot_logs[0]["overtime_after_ten"]
 
+
 def allocate_leave(doc, method=None):
-	if not doc.status in ["Present", "Half Day"]:
+	if doc.status not in ["Present", "Half Day"]:
 		return
 
 	today_date = today()
@@ -56,15 +60,11 @@ def allocate_leave(doc, method=None):
 	leave_type = frappe.get_doc("Leave Type", "Weekly Off")
 
 	attendance = frappe.get_all("Attendance", filters={
-			"attendance_date": ["between", [month_start, today_date]],
-			"docstatus": 1,
-			"employee": doc.employee,
-			"status": ["in", ["Present"]]
-		},
-		fields=["COUNT(name) as marked_days"],
-		group_by="status",
-		order_by="status desc"
-	)
+		"attendance_date": ["between", [month_start, today_date]],
+		"docstatus": 1,
+		"employee": doc.employee,
+		"status": ["in", ["Present"]]
+	}, fields=["COUNT(name) as marked_days"], group_by="status", order_by="status desc")
 
 	if not attendance:
 		return
@@ -97,13 +97,11 @@ def allocate_leave(doc, method=None):
 
 
 def get_leave_allocations(emp, date, leave_type):
-	return frappe.db.sql("""select name
-		from `tabLeave Allocation`
-		where
-			employee=%s and
-			%s between from_date and to_date and docstatus=1
-			and leave_type=%s""",
-	(emp, date, leave_type), as_dict=1)
+	leave_alloc = frappe.qb.DocType('Leave Allocation')
+	return frappe.qb.from_(leave_alloc).select(leave_alloc.name)\
+		.where(leave_alloc.employee == emp).where(date >= leave_alloc.from_date).where(date <= leave_alloc.to_date)\
+		.where(leave_alloc.docstatus == 1).where(leave_alloc.leave_type == leave_type).run(as_dict=True)
+
 
 def daily_attendance():
 	try:
@@ -118,14 +116,13 @@ def daily_attendance():
 	except Exception as e:
 		frappe.log_error(str(e), "Daily Attendance Error")
 
+
 def link_attendance():
 	yesterday = add_to_date(today(), days=-1)
 	checkins = frappe.get_all("Employee Checkin", filters=[
-			["time", "between", [yesterday, yesterday]],
-			["attendance", "in", ["", None]],
-		],
-		fields=["name", "employee", "shift"],
-	)
+		["time", "between", [yesterday, yesterday]],
+		["attendance", "in", ["", None]],
+	], fields=["name", "employee", "shift"])
 	for doc in checkins:
 		try:
 			attendance = frappe.get_last_doc('Attendance', filters={
@@ -145,14 +142,12 @@ def link_attendance():
 		finally:
 			frappe.db.set_value("Employee Checkin", doc.name, 'attendance', attendance.name)
 
+
 def shift_checkout():
 	yesterday = add_to_date(today(), days=-1)
 	checkins = frappe.get_all("Employee Checkin", filters=[
-			["time", "between", [yesterday, yesterday]],
-		],
-		fields=["count(name) as count", "employee", "shift_end"],
-		group_by="employee"
-	)
+		["time", "between", [yesterday, yesterday]],
+	], fields=["count(name) as count", "employee", "shift_end"], group_by="employee")
 	for emp in checkins:
 		if emp["count"] % 2 == 0:
 			continue
@@ -167,30 +162,35 @@ def shift_checkout():
 			frappe.log_error(str(e), "Daily Shift Checkout Error")
 			continue
 
+
 def mark_attendance():
-	attendance = frappe.db.get_all("Attendance",
-		filters={
-			'attendance_date': [">=", "2022-01-11"],
-			'processed': 0,
-			'docstatus': 0
-		}, pluck="name"
-	)
+	attendance = frappe.db.get_all("Attendance", filters={
+		'attendance_date': [">=", "2022-01-15"],
+		'processed': 0,
+		'docstatus': 0
+	}, pluck="name")
 	for att in attendance:
 		try:
 			overtime = 0.00
 			doc = frappe.get_doc("Attendance", att)
-			logs = frappe.db.get_all("Employee Checkin", fields=["*"],
-				filters=[
-					["employee", "=", doc.employee],
-					["time", "between", [doc.attendance_date, doc.attendance_date]],
-				],
-				order_by="time",
-			)
+			logs = frappe.db.get_all("Employee Checkin", fields=["*"], filters=[
+				["employee", "=", doc.employee],
+				["time", "between", [doc.attendance_date, doc.attendance_date]],
+			], order_by="time")
+
 			total_working_hours = calculate_working_hours(
 				logs,
 				"Alternating entries as IN and OUT during the same shift",
 				"Every Valid Check-in and Check-out",
 			)[0]
+			doc.working_hours = total_working_hours
+			doc.processed = 1
+			if total_working_hours < 9.5:
+				for log in logs:
+					if log.shift:
+						doc.late_entry = 1 if logs[0].time > log.shift_start else 0
+						doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
+						break
 
 			if total_working_hours >= 5:
 				doc.status = "Present" if total_working_hours >= 7 else "Half Day"
@@ -207,30 +207,14 @@ def mark_attendance():
 						overtime -= overtime_above_ten
 						doc.ot_above_ten = overtime_above_ten
 					doc.ot_below_ten = overtime if overtime > 0 else 0
-				else:
-					doc.working_hours = total_working_hours
-					if total_working_hours < 9.5:
-						for log in logs:
-							if log.shift:
-								doc.late_entry = 1 if logs[0].time > log.shift_start else 0
-								doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
-								break
-					doc.processed = 1
-					doc.submit()
-					continue
+				doc.submit()
 			else:
 				doc.status = "Absent"
-				for log in logs:
-					if log.shift:
-						doc.late_entry = 1 if logs[0].time > log.shift_start else 0
-						doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
-						break
-			doc.working_hours = total_working_hours
-			doc.processed = 1
-			doc.save()
+				doc.save()
 		except Exception as e:
 			frappe.log_error(str(e), "Daily Attendance Marking Error - " + str(att))
 			continue
+
 
 def employee_checkout(doc, method=None):
 	doc_date = get_datetime(doc.time).date()
@@ -239,20 +223,15 @@ def employee_checkout(doc, method=None):
 		return
 	try:
 		last_in = frappe.get_last_doc('Employee Checkin', filters=[
-				["employee", "=", doc.employee],
-			],
-			order_by="time desc"
-		)
+			["employee", "=", doc.employee],
+		], order_by="time desc")
 	except Exception:
 		return
 	else:
 		checkins = frappe.get_all("Employee Checkin", filters=[
-				["time", "between", [doc_date, doc_date]],
-				["employee", "=", doc.employee],
-			],
-			fields=["count(name) as count"],
-			group_by="employee"
-		)
+			["time", "between", [doc_date, doc_date]],
+			["employee", "=", doc.employee],
+		], fields=["count(name) as count"], group_by="employee")
 		if checkins and checkins[0]["count"] % 2 == 0:
 			return
 		if last_in.time < out_time:
@@ -270,10 +249,11 @@ def employee_checkout(doc, method=None):
 				"time": out_time,
 			}).insert(ignore_permissions=True)
 
+
 def clear_duplicate_checkin():
 	checkin = frappe.qb.DocType('Employee Checkin')
 	duplicate = frappe.qb.from_(checkin).select(checkin.name)\
 		.groupby(checkin.time).groupby(checkin.employee)\
-		.having(Count(checkin.name)>1).run(as_dict=True)
+		.having(Count(checkin.name) > 1).run(as_dict=True)
 	for d in duplicate:
 		frappe.delete_doc('Employee Checkin', d.name, ignore_missing=True, force=True)
