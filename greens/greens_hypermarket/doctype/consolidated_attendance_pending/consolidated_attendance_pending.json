@@ -9,9 +9,11 @@
   "attendance",
   "employee",
   "working_hours",
+  "column_break_4",
   "ot_before_10",
   "ot_after_10",
-  "status"
+  "status",
+  "dstat"
  ],
  "fields": [
   {
@@ -24,50 +26,64 @@
   },
   {
    "fetch_from": "attendance.working_hours",
+   "fetch_if_empty": 1,
    "fieldname": "working_hours",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Working Hours",
-   "read_only": 1
+   "label": "Working Hours"
   },
   {
    "fetch_from": "attendance.ot_below_ten",
+   "fetch_if_empty": 1,
    "fieldname": "ot_before_10",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "OT before 10",
-   "read_only": 1
+   "label": "OT before 10"
   },
   {
    "fetch_from": "attendance.ot_above_ten",
+   "fetch_if_empty": 1,
    "fieldname": "ot_after_10",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "OT after 10",
-   "read_only": 1
+   "label": "OT after 10"
   },
   {
-   "default": "Approve",
+   "fetch_from": "attendance.status",
+   "fetch_if_empty": 1,
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Approve\nReject",
+   "options": "Present\nAbsent\nHalf Day",
+   "read_only_depends_on": "eval: doc.dstat == 1",
    "reqd": 1
   },
   {
    "fetch_from": "attendance.employee_name",
+   "fetch_if_empty": 1,
    "fieldname": "employee",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Employee",
    "read_only": 1
+  },
+  {
+   "fetch_from": "attendance.docstatus",
+   "fieldname": "dstat",
+   "fieldtype": "Int",
+   "label": "Document Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2022-01-07 16:10:57.898702",
+ "modified": "2022-01-25 01:27:09.457998",
  "modified_by": "Administrator",
  "module": "Greens Hypermarket",
  "name": "Consolidated Attendance Pending",
