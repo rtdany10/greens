@@ -3,21 +3,12 @@
 
 import frappe
 from erpnext.hr.doctype.employee_checkin.employee_checkin import \
-	calculate_working_hours
-from erpnext.hr.utils import (
-	create_additional_leave_ledger_entry,
-	get_holiday_dates_for_employee
-)
+				calculate_working_hours
+from erpnext.hr.utils import (create_additional_leave_ledger_entry,
+                              get_holiday_dates_for_employee)
 from frappe.query_builder.functions import Count
-from frappe.utils import (
-	add_to_date,
-	flt,
-	get_datetime,
-	get_first_day,
-	get_last_day,
-	month_diff,
-	today
-)
+from frappe.utils import (add_to_date, flt, get_datetime, get_first_day,
+                          get_last_day, month_diff, today)
 
 
 def salary_slip(doc, method=None):
