@@ -15,8 +15,8 @@ class ConsolidatedAttendanceMarking(Document):
 		attendance = frappe.db.get_all('Attendance', filters={
 			'attendance_date': self.attendance_date
 		}, or_filters={
-			'ot_above_ten': ['>=', 0.00],
-			'ot_below_ten': ['>=', 0.00],
+			'ot_above_ten': ['>', 0.00],
+			'ot_below_ten': ['>', 0.00],
 			'docstatus': 0
 		}, pluck='name')
 
