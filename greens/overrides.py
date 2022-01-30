@@ -2,10 +2,11 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
-from frappe import _
 from erpnext.hr.utils import get_holiday_dates_for_employee
-from frappe.utils import cint, date_diff, flt, format_date, getdate, month_diff, today
 from erpnext.payroll.doctype.salary_slip.salary_slip import SalarySlip
+from frappe import _
+from frappe.utils import (cint, date_diff, flt, format_date, getdate,
+                          month_diff, today)
 
 
 class CustomSalarySlip(SalarySlip):

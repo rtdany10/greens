@@ -2,10 +2,12 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
-from erpnext.hr.doctype.employee_checkin.employee_checkin import calculate_working_hours
+from erpnext.hr.doctype.employee_checkin.employee_checkin import \
+				calculate_working_hours
 from erpnext.hr.utils import create_additional_leave_ledger_entry
 from frappe.query_builder.functions import Count
-from frappe.utils import (add_to_date, flt, get_datetime, get_first_day, get_last_day, today)
+from frappe.utils import (add_to_date, flt, get_datetime, get_first_day,
+                          get_last_day, today)
 
 
 def allocate_leave(doc, method=None):
