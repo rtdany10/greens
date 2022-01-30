@@ -188,6 +188,8 @@ fixtures = [
                     "Salary Slip-is_retiring",
                     "Employee Checkin-auto_checkout",
                     "Attendance-processed",
+                    "HR Settings-allow_cancelling_consolidated_attendance",
+                    "HR Settings-auto_allocated_leave_type",
                 ]
             ]
         ]

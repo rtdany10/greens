@@ -14,7 +14,7 @@ def allocate_leave(doc, method=None):
 
 	today_date = today()
 	month_start = get_first_day(today_date)
-	leave_type = frappe.get_value(
+	leave_type = frappe.get_cached_value(
 		"Leave Type",
 		(frappe.db.get_single_value('HR Settings', 'auto_allocated_leave_type') or "Weekly Off"),
 		['name', 'max_leaves_allowed'],
@@ -60,9 +60,12 @@ def allocate_leave(doc, method=None):
 
 def get_leave_allocations(emp, date, leave_type):
 	leave_alloc = frappe.qb.DocType('Leave Allocation')
-	return frappe.qb.from_(leave_alloc).select(leave_alloc.name)\
-		.where(leave_alloc.employee == emp).where(date >= leave_alloc.from_date).where(date <= leave_alloc.to_date)\
-		.where(leave_alloc.docstatus == 1).where(leave_alloc.leave_type == leave_type).run(as_dict=True)
+	return (
+		frappe.qb.from_(leave_alloc).select(leave_alloc.name)
+		.where(leave_alloc.employee == emp).where(date >= leave_alloc.from_date)
+		.where(date <= leave_alloc.to_date).where(leave_alloc.docstatus == 1)
+		.where(leave_alloc.leave_type == leave_type).run(as_dict=True)
+	)
 
 
 def daily_attendance():

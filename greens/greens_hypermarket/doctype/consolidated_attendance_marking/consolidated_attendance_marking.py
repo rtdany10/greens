@@ -39,4 +39,5 @@ class ConsolidatedAttendanceMarking(Document):
 				doc.submit()
 
 	def on_cancel(self):
-		frappe.throw(_("Processed attendance cannot be cancelled."))
+		if not frappe.get_cached_value("HR Settings", None, "allow_cancelling_consolidated_attendance"):
+			frappe.throw(_("Processed attendance cannot be cancelled."))
