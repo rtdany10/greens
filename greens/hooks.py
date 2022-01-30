@@ -90,9 +90,9 @@ app_license = "GPL v3"
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-#     "ToDo": "custom_app.overrides.CustomToDo"
-# }
+override_doctype_class = {
+    "Salary Slip": "greens.overrides.CustomSalarySlip"
+}
 
 # Document Events
 # ---------------
@@ -100,9 +100,6 @@ app_license = "GPL v3"
 doc_events = {
     "Attendance": {
         "on_submit": "greens.tasks.allocate_leave"
-    },
-    "Salary Slip": {
-        "before_insert": "greens.tasks.salary_slip"
     },
     "Employee Checkin": {
         "before_insert": "greens.tasks.employee_checkout",
