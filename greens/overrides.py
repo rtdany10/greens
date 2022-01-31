@@ -48,7 +48,7 @@ class CustomSalarySlip(SalarySlip):
 		if not lwp:
 			lwp = actual_lwp
 		elif lwp != actual_lwp:
-			frappe.msgprint(_(f"Leave Without Pay does not match with approved {payroll_based_on} records"))
+			frappe.msgprint(_("Leave Without Pay does not match with approved {0} records").format(payroll_based_on))
 
 		self.leave_without_pay = lwp
 		self.total_working_days = working_days
@@ -96,7 +96,7 @@ class CustomSalarySlip(SalarySlip):
 			if start_date <= relieving_date <= end_date:
 				payment_days -= date_diff(end_date, relieving_date)
 			elif relieving_date < start_date:
-				frappe.throw(_(f"Employee relieved on {relieving_date} must be set as 'Left'"))
+				frappe.throw(_("Employee relieved on {0} must be set as 'Left'").format(relieving_date))
 
 		if not cint(include_holidays_in_total_working_days):
 			holidays = self.get_holidays_for_employee(start_date, end_date)
