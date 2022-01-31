@@ -4,42 +4,10 @@
 import frappe
 from erpnext.hr.doctype.employee_checkin.employee_checkin import \
 				calculate_working_hours
-from erpnext.hr.utils import (create_additional_leave_ledger_entry,
-                              get_holiday_dates_for_employee)
+from erpnext.hr.utils import create_additional_leave_ledger_entry
 from frappe.query_builder.functions import Count
 from frappe.utils import (add_to_date, flt, get_datetime, get_first_day,
-                          get_last_day, month_diff, today)
-
-
-def salary_slip(doc, method=None):
-	retirement = frappe.db.get_value("Employee", doc.employee, "date_of_retirement")
-	if retirement and not month_diff(today(), retirement):
-		doc.is_retiring = 1
-	holidays = get_holiday_dates_for_employee(doc.employee, doc.start_date, doc.end_date)
-	if holidays:
-		attendance = frappe.get_all("Attendance", filters={
-			"attendance_date": ["in", holidays],
-			"docstatus": 1,
-			"employee": doc.employee,
-			"status": ["in", ["Present", "Half Day"]]
-		}, fields=["COUNT(name) as count", "status"], group_by="status")
-		if attendance:
-			holiday_working = 0
-			for d in attendance:
-				if d["status"] == "Present":
-					holiday_working += 1
-				else:
-					holiday_working += 0.5
-			doc.holiday_working = holiday_working
-
-	ot_logs = frappe.get_all("Attendance", filters={
-		"attendance_date": ["between", [doc.start_date, doc.end_date]],
-		"docstatus": 1,
-		"employee": doc.employee,
-	}, fields=["SUM(ot_below_ten) as overtime", "SUM(ot_above_ten) as overtime_after_ten"], group_by="employee")
-	if ot_logs:
-		doc.overtime = ot_logs[0]["overtime"]
-		doc.ot_after_ten = ot_logs[0]["overtime_after_ten"]
+                          get_last_day, today)
 
 
 def allocate_leave(doc, method=None):
@@ -48,7 +16,12 @@ def allocate_leave(doc, method=None):
 
 	today_date = today()
 	month_start = get_first_day(today_date)
-	leave_type = frappe.get_doc("Leave Type", "Weekly Off")
+	leave_type = frappe.get_cached_value(
+		"Leave Type",
+		(frappe.db.get_single_value('HR Settings', 'auto_allocated_leave_type') or "Weekly Off"),
+		['name', 'max_leaves_allowed'],
+		as_dict=1
+	)
 
 	attendance = frappe.get_all("Attendance", filters={
 		"attendance_date": ["between", [month_start, today_date]],
@@ -89,9 +62,12 @@ def allocate_leave(doc, method=None):
 
 def get_leave_allocations(emp, date, leave_type):
 	leave_alloc = frappe.qb.DocType('Leave Allocation')
-	return frappe.qb.from_(leave_alloc).select(leave_alloc.name)\
-		.where(leave_alloc.employee == emp).where(date >= leave_alloc.from_date).where(date <= leave_alloc.to_date)\
-		.where(leave_alloc.docstatus == 1).where(leave_alloc.leave_type == leave_type).run(as_dict=True)
+	return (
+		frappe.qb.from_(leave_alloc).select(leave_alloc.name)
+		.where(leave_alloc.employee == emp).where(date >= leave_alloc.from_date)
+		.where(date <= leave_alloc.to_date).where(leave_alloc.docstatus == 1)
+		.where(leave_alloc.leave_type == leave_type).run(as_dict=True)
+	)
 
 
 def daily_attendance():
