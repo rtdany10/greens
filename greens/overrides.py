@@ -121,13 +121,11 @@ class CustomSalarySlip(SalarySlip):
 				unmarked_days -= date_diff(self.end_date, relieving_date)
 
 		# self.total_working_days = unmarked_days
-		frappe.msgprint(str(unmarked_days))
 		unmarked_days -= frappe.get_all("Attendance", filters={
 			"attendance_date": ["between", [self.start_date, self.end_date]],
 			"employee": self.employee,
 			"docstatus": 1
 		}, fields=["COUNT(*) as marked_days"])[0].marked_days
-		frappe.msgprint(str(unmarked_days))
 
 		return unmarked_days
 
