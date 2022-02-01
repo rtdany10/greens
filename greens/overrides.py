@@ -41,9 +41,11 @@ class CustomSalarySlip(SalarySlip):
 
 		if payroll_based_on == "Attendance":
 			actual_lwp, absent = self.calculate_lwp_ppl_and_absent_days_based_on_attendance(holidays)
+			actual_lwp, absent = min(30, actual_lwp), min(30, absent)
 			self.absent_days = absent
 		else:
 			actual_lwp = self.calculate_lwp_or_ppl_based_on_leave_application(holidays, working_days)
+			actual_lwp = min(30, actual_lwp)
 
 		if not lwp:
 			lwp = actual_lwp
