@@ -6,7 +6,7 @@ from erpnext.hr.utils import get_holiday_dates_for_employee
 from erpnext.payroll.doctype.salary_slip.salary_slip import SalarySlip
 from frappe import _
 from frappe.utils import (cint, date_diff, flt, format_date, getdate,
-                          month_diff, today)
+						  month_diff, today)
 
 
 class CustomSalarySlip(SalarySlip):
@@ -41,9 +41,11 @@ class CustomSalarySlip(SalarySlip):
 
 		if payroll_based_on == "Attendance":
 			actual_lwp, absent = self.calculate_lwp_ppl_and_absent_days_based_on_attendance(holidays)
+			actual_lwp, absent = min(30, actual_lwp), min(30, absent)
 			self.absent_days = absent
 		else:
 			actual_lwp = self.calculate_lwp_or_ppl_based_on_leave_application(holidays, working_days)
+			actual_lwp = min(30, actual_lwp)
 
 		if not lwp:
 			lwp = actual_lwp
@@ -119,11 +121,13 @@ class CustomSalarySlip(SalarySlip):
 				unmarked_days -= date_diff(self.end_date, relieving_date)
 
 		# self.total_working_days = unmarked_days
+		frappe.msgprint(str(unmarked_days))
 		unmarked_days -= frappe.get_all("Attendance", filters={
 			"attendance_date": ["between", [self.start_date, self.end_date]],
 			"employee": self.employee,
 			"docstatus": 1
 		}, fields=["COUNT(*) as marked_days"])[0].marked_days
+		frappe.msgprint(str(unmarked_days))
 
 		return unmarked_days
 
