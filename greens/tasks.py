@@ -2,12 +2,17 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
+from erpnext.hr.doctype.attendance.attendance import get_unmarked_days
+from erpnext.hr.doctype.attendance.attendance import \
+				mark_attendance as mark_day
 from erpnext.hr.doctype.employee_checkin.employee_checkin import \
 				calculate_working_hours
+from erpnext.hr.doctype.leave_application.leave_application import \
+				get_leave_approver
 from erpnext.hr.utils import create_additional_leave_ledger_entry
 from frappe.query_builder.functions import Count
 from frappe.utils import (add_to_date, flt, get_datetime, get_first_day,
-                          get_last_day, today)
+                          get_last_day, getdate, today)
 
 
 def allocate_leave(doc, method=None):
@@ -75,11 +80,6 @@ def daily_attendance():
 		link_attendance()
 		shift_checkout()
 		mark_attendance()
-		# shift_list = frappe.get_all('Shift Type', pluck='name')
-		# for shift in shift_list:
-		# 	doc = frappe.get_doc('Shift Type', shift)
-		# 	for employee in doc.get_assigned_employee(doc.process_attendance_after, True):
-		# 		doc.mark_absent_for_dates_with_no_attendance(employee)
 	except Exception as e:
 		frappe.log_error(str(e), "Daily Attendance Error")
 
@@ -161,6 +161,9 @@ def mark_attendance():
 
 			if total_working_hours >= 5:
 				doc.status = "Present" if total_working_hours >= 7 else "Half Day"
+				for log in logs:
+					if log.auto_checkout:
+						doc.status = "Absent"
 				if total_working_hours >= 10.5:
 					overtime += (total_working_hours - 9.5)
 					in_time = get_datetime(add_to_date(doc.attendance_date, hours=22))
@@ -213,7 +216,7 @@ def employee_checkout(doc, method=None):
 				"doctype": "Employee Checkin",
 				"employee": doc.employee,
 				"log_type": "IN",
-				"time": out_time,
+				"time": add_to_date(doc_date, hours=22, seconds=1),
 			}).insert(ignore_permissions=True)
 
 
@@ -224,3 +227,43 @@ def clear_duplicate_checkin():
 		.having(Count(checkin.name) > 1).run(as_dict=True)
 	for d in duplicate:
 		frappe.delete_doc('Employee Checkin', d.name, ignore_missing=True, force=True)
+
+
+def monthly_marking():
+	active_emp = frappe.db.get_all('Employee', {'status': 'Active'}, pluck='name')
+	leave_type = frappe.get_cached_value('HR Settings', None, 'auto_allocated_leave_type') or "Weekly Off"
+	for emp in active_emp:
+		try:
+			last_month = getdate(add_to_date(today(), months=-1))
+			month_name = last_month.strftime("%B")
+			unmaked_days = get_unmarked_days(emp, month_name)
+			if not unmaked_days:
+				continue
+			leave_allocations = get_leave_allocations(emp, get_last_day(last_month), leave_type)
+			if leave_allocations:
+				leaves = 0
+				for d in leave_allocations:
+					leaves += int(frappe.db.get_value("Leave Allocation", d.name, 'total_leaves_allocated'))
+				for i in range(leaves):
+					leave_date = unmaked_days.pop(-1)
+					mark_leave(emp, leave_date, leave_type)
+
+			for day in unmaked_days:
+				mark_day(emp, day, 'Absent')
+		except Exception as e:
+			frappe.log_error(str(e), "Monthly Attendance Marking Error")
+			continue
+
+
+def mark_leave(emp, date, leave_type):
+	doc_dict = {
+		'doctype': 'Leave Application',
+		'employee': emp,
+		'leave_type': leave_type,
+		'from_date': date,
+		'to_date': date,
+		'leave_approver': get_leave_approver(emp),
+		'status': 'Approved'
+	}
+	leave_application = frappe.get_doc(doc_dict).insert()
+	leave_application.submit()

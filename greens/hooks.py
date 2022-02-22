@@ -115,7 +115,10 @@ scheduler_events = {
     ],
     "daily_long": [
         "greens.tasks.daily_attendance"
-    ]
+    ],
+    "monthly_long": [
+        "greens.tasks.monthly_marking"
+    ],
 }
 
 # Testing
