@@ -190,6 +190,7 @@ fixtures = [
                     "Attendance-processed",
                     "HR Settings-allow_cancelling_consolidated_attendance",
                     "HR Settings-auto_allocated_leave_type",
+                    "Salary Slip-total_working"
                 ]
             ]
         ]
