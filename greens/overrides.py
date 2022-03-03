@@ -157,7 +157,7 @@ class CustomSalarySlip(SalarySlip):
             "employee": self.employee,
         }, fields=[
             "SUM(ot_below_ten) as overtime",
-            "SUM(ot_above_ten) as overtime_after_ten"
+            "SUM(ot_above_ten) as overtime_after_ten",
             "SUM(working_hours) as working_hours"
         ], group_by="employee")
 
