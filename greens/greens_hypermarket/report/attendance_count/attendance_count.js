@@ -9,12 +9,14 @@ frappe.query_reports["Attendance Count"] = {
 			"label": __("From Date"),
 			"fieldtype": "Date",
 			"default": frappe.datetime.get_today(),
+			"reqd": 1
 		},
 		{
 			"fieldname": "to_date",
 			"label": __("To Date"),
 			"fieldtype": "Date",
 			"default": frappe.datetime.get_today(),
+			"reqd": 1
 		},
 		{
 			"fieldname": "branch",
