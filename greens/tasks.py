@@ -182,7 +182,11 @@ def mark_attendance():
 						overtime -= overtime_above_ten
 						doc.ot_above_ten = overtime_above_ten
 					doc.ot_below_ten = overtime if overtime > 0 else 0
-				doc.submit()
+
+				if doc.status != "Absent":
+					doc.submit()
+				else:
+					doc.save()
 			else:
 				doc.status = "Absent"
 				doc.save()
