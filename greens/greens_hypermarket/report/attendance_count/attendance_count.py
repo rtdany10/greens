@@ -25,7 +25,7 @@ def execute(filters=None):
 			"absent": 0,
 		}
 		for record in records:
-			row[str(record['status']).lower()] = record['count']
+			row[str(record['status']).lower().replace(" ", "_")] = record['count']
 
 		data.append(row)
 
