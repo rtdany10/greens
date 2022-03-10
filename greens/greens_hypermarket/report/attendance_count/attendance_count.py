@@ -12,7 +12,7 @@ def execute(filters=None):
 
 	for b in branch:
 		records = frappe.db.get_all('Attendance', filters={
-			"attendance_date": ["between", [filters.get("frm_date"), filters.get("to_date")]],
+			"attendance_date": ["between", [filters.get("from_date"), filters.get("to_date")]],
 			"docstatus": 1,
 			"branch": b
 		}, fields=["count(name) as count", "status"], group_by="status")
