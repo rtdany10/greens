@@ -157,6 +157,11 @@ def mark_attendance():
 			doc.working_hours = total_working_hours
 			doc.processed = 1
 
+			if frappe.db.get_value("Employee", doc.employee, "employment_type") == "Part-time":
+				doc.status = "Present"
+				doc.submit()
+				continue
+
 			if total_working_hours < 9.5:
 				for log in logs:
 					if log.shift:
