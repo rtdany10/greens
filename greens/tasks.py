@@ -282,3 +282,135 @@ def mark_leave(emp, date, leave_type):
 		'status': 'Approved'
 	}
 	frappe.get_doc(doc_dict).submit()
+
+
+@frappe.whitelist()
+def update_attendance(from_date, to_date, device):
+	frappe.enqueue(
+		'greens.tasks._update_attendance', queue='long',
+		from_date=from_date, to_date=to_date, device=device
+	)
+	frappe.msgprint("Job enqueued")
+
+
+def _update_attendance(from_date, to_date, device):
+	to_process = []
+	while(from_date <= to_date):
+		checkins = frappe.get_all("Employee Checkin", filters=[
+			["time", "between", [from_date, from_date]],
+		], fields=["count(name) as count", "employee", "shift_end"], group_by="employee")
+		for emp in checkins:
+			if emp["count"] % 2 == 0:
+				continue
+			try:
+				frappe.get_doc({
+					"doctype": "Employee Checkin",
+					"employee": emp["employee"],
+					"time": emp["shift_end"] or add_to_date(from_date, hours=22),
+					"auto_checkout": 1
+				}).insert(ignore_permissions=True)
+			except Exception as e:
+				frappe.log_error(str(e), "Daily Shift Checkout Error")
+				continue
+
+		checkins = frappe.get_all("Employee Checkin", filters=[
+			["time", "between", [from_date, from_date]],
+			["attendance", "in", ["", None]],
+			["device_id", "=", device],
+		], fields=["name", "employee", "shift"])
+		for doc in checkins:
+			try:
+				attendance = frappe.get_last_doc('Attendance', filters={
+					'employee': doc.employee,
+					'attendance_date': from_date,
+					'docstatus': ('!=', '2')
+				})
+			except Exception:
+				attendance = frappe.get_doc({
+					'doctype': 'Attendance',
+					'employee': doc.employee,
+					'attendance_date': from_date,
+					'status': "Present",
+					'company': frappe.db.get_value('Employee', doc.employee, 'company'),
+					'shift': doc.shift,
+				})
+				attendance.flags.ignore_validate = True
+				attendance.insert(ignore_permissions=True)
+			else:
+				if attendance.docstatus == 1:
+					attendance.cancel()
+					attendance = frappe.get_doc({
+						'doctype': 'Attendance',
+						'employee': doc.employee,
+						'attendance_date': from_date,
+						'status': "Present",
+						'company': frappe.db.get_value('Employee', doc.employee, 'company'),
+						'shift': doc.shift,
+					})
+					attendance.flags.ignore_validate = True
+					attendance.insert(ignore_permissions=True)
+			finally:
+				frappe.db.set_value("Employee Checkin", doc.name, 'attendance', attendance.name)
+				to_process.append(attendance.name)
+		from_date = add_to_date(from_date, days=1)
+
+	for att in to_process:
+		try:
+			overtime = 0.00
+			doc = frappe.get_doc("Attendance", att)
+			logs = frappe.db.get_all("Employee Checkin", fields=["*"], filters=[
+				["employee", "=", doc.employee],
+				["time", "between", [doc.attendance_date, doc.attendance_date]],
+			], order_by="time")
+
+			total_working_hours = calculate_working_hours(
+				logs,
+				"Alternating entries as IN and OUT during the same shift",
+				"Every Valid Check-in and Check-out",
+			)[0]
+
+			doc.flags.ignore_validate = True
+			doc.working_hours = total_working_hours
+			doc.processed = 1
+
+			if frappe.db.get_value("Employee", doc.employee, "employment_type") == "Part-time":
+				doc.status = "Present"
+				doc.submit()
+				continue
+
+			if total_working_hours < 9.5:
+				for log in logs:
+					if log.shift:
+						doc.late_entry = 1 if logs[0].time > log.shift_start else 0
+						doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
+						break
+
+			if total_working_hours >= 5:
+				doc.status = "Present" if total_working_hours >= 7 else "Half Day"
+				for log in logs:
+					if log.auto_checkout:
+						doc.status = "Absent"
+				if total_working_hours >= 10.5:
+					overtime += (total_working_hours - 9.5)
+					in_time = get_datetime(add_to_date(doc.attendance_date, hours=22))
+					if logs[-1].time > in_time:
+						ot_log = [d for d in logs if d.time >= in_time]
+						overtime_above_ten = calculate_working_hours(
+							ot_log,
+							"Alternating entries as IN and OUT during the same shift",
+							"Every Valid Check-in and Check-out",
+						)[0]
+						overtime -= overtime_above_ten
+						doc.ot_above_ten = overtime_above_ten
+					doc.ot_below_ten = overtime if overtime > 0 else 0
+
+				if doc.status != "Absent":
+					doc.submit()
+				else:
+					doc.save()
+			else:
+				doc.status = "Absent"
+				doc.save()
+		except Exception as e:
+			frappe.log_error(str(e), "Daily Attendance Marking Error - " + str(att))
+			continue
