@@ -26,7 +26,7 @@ def execute(filters=None):
 		filters = {}
 
 	if filters.hide_year_field == 1:
-		filters.year = 2020
+		filters.year = 2022
 
 	conditions, filters = get_conditions(filters)
 	columns, days = get_columns(filters)
@@ -141,6 +141,7 @@ def add_data(
 ):
 	record = []
 	emp_att_map = {}
+	today_day = getdate().day - 1
 	for emp in employee_map:
 		emp_det = employee_map.get(emp)
 		if not emp_det or emp not in att_map:
@@ -169,7 +170,10 @@ def add_data(
 								status = "Holiday"
 							total_h += 1
 
-			abbr = status_map.get(status, "")
+			if day < today_day:
+				abbr = status_map.get(status, "A")
+			else:
+				abbr = status_map.get(status, "")
 			emp_status_map.append(abbr)
 
 			if filters.summarized_view:
