@@ -171,9 +171,6 @@ def mark_attendance():
 
 			if total_working_hours >= 5:
 				doc.status = "Present" if total_working_hours >= 7 else "Half Day"
-				for log in logs:
-					if log.auto_checkout:
-						doc.status = "Absent"
 				if total_working_hours >= 10.5:
 					overtime += (total_working_hours - 9.5)
 					in_time = get_datetime(add_to_date(doc.attendance_date, hours=22))
@@ -187,11 +184,7 @@ def mark_attendance():
 						overtime -= overtime_above_ten
 						doc.ot_above_ten = overtime_above_ten
 					doc.ot_below_ten = overtime if overtime > 0 else 0
-
-				if doc.status != "Absent":
-					doc.submit()
-				else:
-					doc.save()
+				doc.submit()
 			else:
 				doc.status = "Absent"
 				doc.save()
@@ -387,9 +380,6 @@ def _update_attendance(from_date, to_date, device):
 
 			if total_working_hours >= 5:
 				doc.status = "Present" if total_working_hours >= 7 else "Half Day"
-				for log in logs:
-					if log.auto_checkout:
-						doc.status = "Absent"
 				if total_working_hours >= 10.5:
 					overtime += (total_working_hours - 9.5)
 					in_time = get_datetime(add_to_date(doc.attendance_date, hours=22))
@@ -403,11 +393,7 @@ def _update_attendance(from_date, to_date, device):
 						overtime -= overtime_above_ten
 						doc.ot_above_ten = overtime_above_ten
 					doc.ot_below_ten = overtime if overtime > 0 else 0
-
-				if doc.status != "Absent":
-					doc.submit()
-				else:
-					doc.save()
+				doc.submit()
 			else:
 				doc.status = "Absent"
 				doc.save()
