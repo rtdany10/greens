@@ -79,7 +79,7 @@ def daily_attendance():
 		link_attendance()
 		shift_checkout()
 		mark_attendance()
-		# frappe.enqueue('greens.tasks.mark_absence', queue='long', enqueue_after_commit=True)
+		frappe.enqueue('greens.tasks.mark_absence', queue='long', enqueue_after_commit=True)
 	except Exception as e:
 		frappe.log_error(str(e), "Daily Attendance Error")
 
