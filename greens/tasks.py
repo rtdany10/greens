@@ -15,8 +15,19 @@ from frappe.utils import (add_to_date, flt, get_datetime, get_first_day,
 
 
 def allocate_leave(doc, method=None):
-	if doc.status not in ["Present", "Half Day"]:
+	if doc.status not in ["Present", "Half Day", "Absent"]:
 		return
+
+	#to create leave appln for Absent
+	if doc.status == "Absent":
+		user = get_leave_approver(doc.employee)
+		leave_apply = frappe.new_doc("Leave Application")
+		leave_apply.employee = doc.employee
+		leave_apply.from_date = doc.attendance_date
+		leave_apply.to_date = doc.attendance_date
+		leave_apply.leave_type = "Leave Without Pay"
+		leave_apply.leave_approver = user
+		leave_apply.save(ignore_permissions=True)
 
 	today_date = today()
 	month_start = get_first_day(today_date)
@@ -191,7 +202,6 @@ def mark_attendance():
 		except Exception as e:
 			frappe.log_error(str(e), "Daily Attendance Marking Error - " + str(att))
 			continue
-
 
 def employee_checkout(doc, method=None):
 	doc_date = get_datetime(doc.time).date()
