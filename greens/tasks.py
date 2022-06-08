@@ -192,7 +192,6 @@ def mark_attendance():
 			frappe.log_error(str(e), "Daily Attendance Marking Error - " + str(att))
 			continue
 
-
 def employee_checkout(doc, method=None):
 	doc_date = get_datetime(doc.time).date()
 	out_time = get_datetime(add_to_date(doc_date, hours=22))
@@ -246,35 +245,28 @@ def mark_absence():
 	}, pluck="employee")
 
 	active_emp = list(set(active_emp).difference(exclude_emp))
-	leave_type = frappe.get_cached_value('HR Settings', None, 'auto_allocated_leave_type') or "Weekly Off"
+	# leave_type = frappe.get_cached_value('HR Settings', None, 'auto_allocated_leave_type') or "Weekly Off"
 
 	for emp in active_emp:
 		try:
-			leave_allocations, leaves = get_leave_allocations(emp, yesterday, leave_type), 0
-			if leave_allocations:
-				for d in leave_allocations:
-					leaves += int(frappe.db.get_value("Leave Allocation", d.name, 'total_leaves_allocated'))
-				if leaves:
-					mark_leave(emp, yesterday, leave_type)
-					continue
-
+			mark_leave(emp, yesterday)
 			mark_day(emp, yesterday, 'Absent')
 		except Exception as e:
 			frappe.log_error(str(e), "Daily Absence Marking Error - " + str(emp))
 			continue
 
 
-def mark_leave(emp, date, leave_type):
+def mark_leave(emp, date):
 	doc_dict = {
 		'doctype': 'Leave Application',
 		'employee': emp,
-		'leave_type': leave_type,
+		'leave_type': "Leave Without Pay",
 		'from_date': date,
 		'to_date': date,
 		'leave_approver': get_leave_approver(emp),
-		'status': 'Approved'
+		'status': 'Open'
 	}
-	frappe.get_doc(doc_dict).submit()
+	frappe.get_doc(doc_dict).save()
 
 
 @frappe.whitelist()
