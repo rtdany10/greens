@@ -245,7 +245,7 @@ def mark_absence():
 	}, pluck="employee")
 
 	active_emp = list(set(active_emp).difference(exclude_emp))
-	leave_type = frappe.get_cached_value('HR Settings', None, 'auto_allocated_leave_type') or "Weekly Off"
+	# leave_type = frappe.get_cached_value('HR Settings', None, 'auto_allocated_leave_type') or "Weekly Off"
 
 	for emp in active_emp:
 		try:
