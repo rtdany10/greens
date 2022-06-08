@@ -15,19 +15,8 @@ from frappe.utils import (add_to_date, flt, get_datetime, get_first_day,
 
 
 def allocate_leave(doc, method=None):
-	if doc.status not in ["Present", "Half Day", "Absent"]:
+	if doc.status not in ["Present", "Half Day"]:
 		return
-
-	#to create leave appln for Absent
-	if doc.status == "Absent":
-		user = get_leave_approver(doc.employee)
-		leave_apply = frappe.new_doc("Leave Application")
-		leave_apply.employee = doc.employee
-		leave_apply.from_date = doc.attendance_date
-		leave_apply.to_date = doc.attendance_date
-		leave_apply.leave_type = "Leave Without Pay"
-		leave_apply.leave_approver = user
-		leave_apply.save(ignore_permissions=True)
 
 	today_date = today()
 	month_start = get_first_day(today_date)
@@ -260,31 +249,24 @@ def mark_absence():
 
 	for emp in active_emp:
 		try:
-			leave_allocations, leaves = get_leave_allocations(emp, yesterday, leave_type), 0
-			if leave_allocations:
-				for d in leave_allocations:
-					leaves += int(frappe.db.get_value("Leave Allocation", d.name, 'total_leaves_allocated'))
-				if leaves:
-					mark_leave(emp, yesterday, leave_type)
-					continue
-
+			mark_leave(emp, yesterday)
 			mark_day(emp, yesterday, 'Absent')
 		except Exception as e:
 			frappe.log_error(str(e), "Daily Absence Marking Error - " + str(emp))
 			continue
 
 
-def mark_leave(emp, date, leave_type):
+def mark_leave(emp, date):
 	doc_dict = {
 		'doctype': 'Leave Application',
 		'employee': emp,
-		'leave_type': leave_type,
+		'leave_type': "Leave Without Pay",
 		'from_date': date,
 		'to_date': date,
 		'leave_approver': get_leave_approver(emp),
-		'status': 'Approved'
+		'status': 'Open'
 	}
-	frappe.get_doc(doc_dict).submit()
+	frappe.get_doc(doc_dict).save()
 
 
 @frappe.whitelist()
