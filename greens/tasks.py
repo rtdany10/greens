@@ -192,6 +192,7 @@ def mark_attendance():
 			frappe.log_error(str(e), "Daily Attendance Marking Error - " + str(att))
 			continue
 
+
 def employee_checkout(doc, method=None):
 	doc_date = get_datetime(doc.time).date()
 	out_time = get_datetime(add_to_date(doc_date, hours=22))
@@ -241,7 +242,7 @@ def mark_absence(date=None):
 		"ctr": "CITY CENTRE",
 		"tly": "DOWN TOWN",
 		"Thalap": "BAZAAR",
-		"capitol": "CAPITOL MALL",
+		"capitol": "CAPITOL MALL"
 	}
 	yesterday = date or add_to_date(today(), days=-1)
 	working_device = frappe.get_all("Employee Checkin", filters=[
@@ -267,11 +268,11 @@ def mark_absence(date=None):
 	}, pluck="employee")
 
 	active_emp = list(set(active_emp).difference(exclude_emp))
-	leave_type = frappe.get_cached_value('HR Settings', None, 'auto_allocated_leave_type') or "Weekly Off"
+	# leave_type = frappe.get_cached_value('HR Settings', None, 'auto_allocated_leave_type') or "Weekly Off"
 
 	for emp in active_emp:
 		try:
-			mark_leave(emp, yesterday, leave_type)
+			mark_leave(emp, yesterday, "Leave Without Pay")
 			mark_day(emp, yesterday, 'Absent')
 		except Exception as e:
 			frappe.log_error(str(e), "Daily Absence Marking Error - " + str(emp))
