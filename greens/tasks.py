@@ -426,7 +426,7 @@ def cancel_leave(emp, date):
 	except Exception:
 		return
 	else:
-		if leave.docstatus == 1:
+		if leave.docstatus:
 			leave.cancel()
-		elif leave.docstatus == 0:
+		else:
 			leave.delete()
