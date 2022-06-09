@@ -236,8 +236,26 @@ def clear_duplicate_checkin():
 
 
 def mark_absence():
+	device = {
+		"Gp": "GRAND PLAZA",
+		"ctr": "CITY CENTRE",
+		"tly": "DOWN TOWN",
+		"Thalap": "BAZAAR",
+		"capitol": "CAPITOL MALL",
+	}
 	yesterday = add_to_date(today(), days=-1)
-	active_emp = frappe.db.get_all('Employee', {'status': 'Active'}, pluck='name')
+	working_device = frappe.get_all("Employee Checkin", filters=[
+		["time", "between", [yesterday, yesterday]],
+		["device_id", "not in", ["", None]],
+	], pluck="device_id", group_by="device_id")
+	include_branch = []
+	for d in working_device:
+		include_branch.append(device.get(d))
+
+	active_emp = frappe.db.get_all('Employee', {
+		'status': 'Active',
+		'branch': ["in", include_branch]
+	}, pluck='name')
 
 	exclude_emp = frappe.db.get_all("Attendance", filters={
 		'attendance_date': ["=", yesterday],
