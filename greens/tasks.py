@@ -235,7 +235,7 @@ def clear_duplicate_checkin():
 		frappe.delete_doc('Employee Checkin', d.name, ignore_missing=True, force=True)
 
 
-def mark_absence():
+def mark_absence(date=None):
 	device = {
 		"Gp": "GRAND PLAZA",
 		"ctr": "CITY CENTRE",
@@ -243,7 +243,7 @@ def mark_absence():
 		"Thalap": "BAZAAR",
 		"capitol": "CAPITOL MALL",
 	}
-	yesterday = add_to_date(today(), days=-1)
+	yesterday = date or add_to_date(today(), days=-1)
 	working_device = frappe.get_all("Employee Checkin", filters=[
 		["time", "between", [yesterday, yesterday]],
 		["device_id", "not in", ["", None]],
@@ -251,6 +251,10 @@ def mark_absence():
 	include_branch = []
 	for d in working_device:
 		include_branch.append(device.get(d))
+
+	if not include_branch:
+		frappe.log_error("Logs from no branches found.", "Daily Absence Marking")
+		return
 
 	active_emp = frappe.db.get_all('Employee', {
 		'status': 'Active',
@@ -354,6 +358,8 @@ def _update_attendance(from_date, to_date, device):
 			finally:
 				frappe.db.set_value("Employee Checkin", doc.name, 'attendance', attendance.name)
 				to_process.append(attendance.name)
+
+		mark_absence(from_date)
 		from_date = add_to_date(from_date, days=1)
 
 	for att in to_process:
