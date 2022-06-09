@@ -300,7 +300,6 @@ def _update_attendance(from_date, to_date, device):
 
 		checkins = frappe.get_all("Employee Checkin", filters=[
 			["time", "between", [from_date, from_date]],
-			["attendance", "in", ["", None]],
 			["device_id", "=", device],
 		], fields=["name", "employee", "shift"])
 		for doc in checkins:
@@ -343,6 +342,7 @@ def _update_attendance(from_date, to_date, device):
 		try:
 			overtime = 0.00
 			doc = frappe.get_doc("Attendance", att)
+			cancel_leave(doc.employee, doc.attendance_date)
 			logs = frappe.db.get_all("Employee Checkin", fields=["*"], filters=[
 				["employee", "=", doc.employee],
 				["time", "between", [doc.attendance_date, doc.attendance_date]],
@@ -392,3 +392,19 @@ def _update_attendance(from_date, to_date, device):
 		except Exception as e:
 			frappe.log_error(str(e), "Daily Attendance Marking Error - " + str(att))
 			continue
+
+
+def cancel_leave(emp, date):
+	try:
+		leave = frappe.get_last_doc('Leave Application', filters={
+			'employee': emp,
+			'from_date': date,
+			'docstatus': ('!=', '2')
+		})
+	except Exception:
+		return
+	else:
+		if leave.docstatus == 1:
+			leave.cancel()
+		elif leave.docstatus == 0:
+			leave.delete()
