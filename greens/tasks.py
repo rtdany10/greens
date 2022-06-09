@@ -263,22 +263,22 @@ def mark_absence():
 	}, pluck="employee")
 
 	active_emp = list(set(active_emp).difference(exclude_emp))
-	# leave_type = frappe.get_cached_value('HR Settings', None, 'auto_allocated_leave_type') or "Weekly Off"
+	leave_type = frappe.get_cached_value('HR Settings', None, 'auto_allocated_leave_type') or "Weekly Off"
 
 	for emp in active_emp:
 		try:
-			mark_leave(emp, yesterday)
+			mark_leave(emp, yesterday, leave_type)
 			mark_day(emp, yesterday, 'Absent')
 		except Exception as e:
 			frappe.log_error(str(e), "Daily Absence Marking Error - " + str(emp))
 			continue
 
 
-def mark_leave(emp, date):
+def mark_leave(emp, date, leave_type):
 	doc_dict = {
 		'doctype': 'Leave Application',
 		'employee': emp,
-		'leave_type': "Leave Without Pay",
+		'leave_type': leave_type,
 		'from_date': date,
 		'to_date': date,
 		'leave_approver': get_leave_approver(emp),
