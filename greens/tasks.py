@@ -192,6 +192,7 @@ def mark_attendance():
 			frappe.log_error(str(e), "Daily Attendance Marking Error - " + str(att))
 			continue
 
+
 def employee_checkout(doc, method=None):
 	doc_date = get_datetime(doc.time).date()
 	out_time = get_datetime(add_to_date(doc_date, hours=22))
@@ -235,9 +236,34 @@ def clear_duplicate_checkin():
 		frappe.delete_doc('Employee Checkin', d.name, ignore_missing=True, force=True)
 
 
-def mark_absence():
-	yesterday = add_to_date(today(), days=-1)
-	active_emp = frappe.db.get_all('Employee', {'status': 'Active'}, pluck='name')
+def mark_absence(date=None, device=None):
+	devices = {
+		"Gp": "GRAND PLAZA",
+		"ctr": "CITY CENTRE",
+		"tly": "DOWN TOWN",
+		"Thalap": "BAZAAR",
+		"capitol": "CAPITOL MALL"
+	}
+	yesterday = date or add_to_date(today(), days=-1)
+	include_branch = []
+	if not device:
+		working_device = frappe.get_all("Employee Checkin", filters=[
+			["time", "between", [yesterday, yesterday]],
+			["device_id", "not in", ["", None]],
+		], pluck="device_id", group_by="device_id")
+		for d in working_device:
+			include_branch.append(devices.get(d))
+	else:
+		include_branch.append(devices.get(device))
+
+	if not include_branch:
+		frappe.log_error("Logs from no branches found.", "Daily Absence Marking")
+		return
+
+	active_emp = frappe.db.get_all('Employee', {
+		'status': 'Active',
+		'branch': ["in", include_branch]
+	}, pluck='name')
 
 	exclude_emp = frappe.db.get_all("Attendance", filters={
 		'attendance_date': ["=", yesterday],
@@ -249,18 +275,18 @@ def mark_absence():
 
 	for emp in active_emp:
 		try:
-			mark_leave(emp, yesterday)
+			mark_leave(emp, yesterday, "Leave Without Pay")
 			mark_day(emp, yesterday, 'Absent')
 		except Exception as e:
 			frappe.log_error(str(e), "Daily Absence Marking Error - " + str(emp))
 			continue
 
 
-def mark_leave(emp, date):
+def mark_leave(emp, date, leave_type):
 	doc_dict = {
 		'doctype': 'Leave Application',
 		'employee': emp,
-		'leave_type': "Leave Without Pay",
+		'leave_type': leave_type,
 		'from_date': date,
 		'to_date': date,
 		'leave_approver': get_leave_approver(emp),
@@ -336,6 +362,8 @@ def _update_attendance(from_date, to_date, device):
 			finally:
 				frappe.db.set_value("Employee Checkin", doc.name, 'attendance', attendance.name)
 				to_process.append(attendance.name)
+
+		mark_absence(from_date, device)
 		from_date = add_to_date(from_date, days=1)
 
 	for att in to_process:
@@ -404,7 +432,7 @@ def cancel_leave(emp, date):
 	except Exception:
 		return
 	else:
-		if leave.docstatus == 1:
+		if leave.docstatus:
 			leave.cancel()
-		elif leave.docstatus == 0:
+		else:
 			leave.delete()
