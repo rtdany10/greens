@@ -242,7 +242,6 @@ def add_data(
 
 
 def get_columns(filters):
-
 	columns = []
 
 	if filters.group_by:
@@ -300,6 +299,8 @@ def get_conditions(filters):
 		conditions += " and company = %(company)s"
 	if filters.get("employee"):
 		conditions += " and employee = %(employee)s"
+	if filters.get("branch"):
+		conditions += " and branch = %(branch)s"
 
 	return conditions, filters
 
