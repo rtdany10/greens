@@ -53,12 +53,12 @@ frappe.query_reports["Branch Wise Attendance Details"] = {
 			"default": frappe.defaults.get_user_default("Company"),
 			"reqd": 1
 		},
-		// {
-		// 	"fieldname":"branch",
-		// 	"label": __("Branch"),
-		// 	"fieldtype": "Link",
-		// 	"options": "Branch"
-		// },
+		{
+			"fieldname":"branch",
+			"label": __("Branch"),
+			"fieldtype": "Link",
+			"options": "Branch"
+		},
 		{
 			"fieldname":"group_by",
 			"label": __("Group By"),
