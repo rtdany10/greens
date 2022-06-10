@@ -238,23 +238,21 @@ def clear_duplicate_checkin():
 
 def mark_absence(date=None, device=None):
 	devices = {
-		"Gp": "GRAND PLAZA",
-		"ctr": "CITY CENTRE",
-		"tly": "DOWN TOWN",
-		"Thalap": "BAZAAR",
-		"capitol": "CAPITOL MALL"
+		"Gp": ["GRAND PLAZA", "CENTRAL"],
+		"ctr": ["CITY CENTRE", "WARE HOUSE"],
+		"tly": ["DOWN TOWN"],
+		"Thalap": ["BAZAAR"],
+		"capitol": ["CAPITOL MALL"]
 	}
 	yesterday = date or add_to_date(today(), days=-1)
-	include_branch = []
+	include_branch = [branch for branch in devices.get(device, [])]
 	if not device:
 		working_device = frappe.get_all("Employee Checkin", filters=[
 			["time", "between", [yesterday, yesterday]],
 			["device_id", "not in", ["", None]],
 		], pluck="device_id", group_by="device_id")
 		for d in working_device:
-			include_branch.append(devices.get(d))
-	else:
-		include_branch.append(devices.get(device))
+			include_branch += [branch for branch in devices.get(d, [])]
 
 	if not include_branch:
 		frappe.log_error("Logs from no branches found.", "Daily Absence Marking")
