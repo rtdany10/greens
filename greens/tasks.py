@@ -162,14 +162,17 @@ def mark_attendance():
 				doc.submit()
 				continue
 
-			if total_working_hours < 9.5:
+			auto_checkout = False
+			# if total_working_hours < 9.5:
+			if len(logs) == 2:
 				for log in logs:
-					if log.shift:
-						doc.late_entry = 1 if logs[0].time > log.shift_start else 0
-						doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
-						break
+					if log.auto_checkout:
+						auto_checkout = True
+					# if log.shift:
+					# 	doc.late_entry = 1 if logs[0].time > log.shift_start else 0
+					# 	doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
 
-			if total_working_hours >= 5:
+			if not auto_checkout and total_working_hours >= 5:
 				doc.status = "Present" if total_working_hours >= 7 else "Half Day"
 				if total_working_hours >= 10.5:
 					overtime += (total_working_hours - 9.5)
@@ -186,7 +189,7 @@ def mark_attendance():
 					doc.ot_below_ten = overtime if overtime > 0 else 0
 				doc.submit()
 			else:
-				doc.status = "Absent"
+				doc.status = "Present"
 				doc.save()
 		except Exception as e:
 			frappe.log_error(str(e), "Daily Attendance Marking Error - " + str(att))
@@ -273,7 +276,7 @@ def mark_absence(date=None, device=None):
 
 	for emp in active_emp:
 		try:
-			mark_leave(emp, yesterday, "Leave Without Pay")
+			# mark_leave(emp, yesterday, "Leave Without Pay")
 			mark_day(emp, yesterday, 'Absent')
 		except Exception as e:
 			frappe.log_error(str(e), "Daily Absence Marking Error - " + str(emp))
@@ -368,7 +371,7 @@ def _update_attendance(from_date, to_date, device):
 		try:
 			overtime = 0.00
 			doc = frappe.get_doc("Attendance", att)
-			cancel_leave(doc.employee, doc.attendance_date)
+			# cancel_leave(doc.employee, doc.attendance_date)
 			logs = frappe.db.get_all("Employee Checkin", fields=["*"], filters=[
 				["employee", "=", doc.employee],
 				["time", "between", [doc.attendance_date, doc.attendance_date]],
@@ -389,14 +392,20 @@ def _update_attendance(from_date, to_date, device):
 				doc.submit()
 				continue
 
-			if total_working_hours < 9.5:
-				for log in logs:
-					if log.shift:
-						doc.late_entry = 1 if logs[0].time > log.shift_start else 0
-						doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
-						break
+			# if total_working_hours < 9.5:
+			# 	for log in logs:
+			# 		if log.shift:
+			# 			doc.late_entry = 1 if logs[0].time > log.shift_start else 0
+			# 			doc.early_exit = 1 if logs[-1].time < log.shift_end else 0
+			# 			break
 
-			if total_working_hours >= 5:
+			auto_checkout = False
+			if len(logs) == 2:
+				for log in logs:
+					if log.auto_checkout:
+						auto_checkout = True
+
+			if not auto_checkout and total_working_hours >= 5:
 				doc.status = "Present" if total_working_hours >= 7 else "Half Day"
 				if total_working_hours >= 10.5:
 					overtime += (total_working_hours - 9.5)
@@ -413,7 +422,7 @@ def _update_attendance(from_date, to_date, device):
 					doc.ot_below_ten = overtime if overtime > 0 else 0
 				doc.submit()
 			else:
-				doc.status = "Absent"
+				doc.status = "Present"
 				doc.save()
 		except Exception as e:
 			frappe.log_error(str(e), "Daily Attendance Marking Error - " + str(att))
