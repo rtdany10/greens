@@ -35,7 +35,7 @@ def execute(filters=None):
 		return columns, [], None, None
 
 	if filters.group_by:
-		emp_map, group_by_parameters = get_employee_details(filters.group_by, filters.company)
+		emp_map, group_by_parameters = get_employee_details(filters.group_by, filters.company, filters.branch)
 		holiday_list = []
 		for parameter in group_by_parameters:
 			h_list = [
@@ -45,7 +45,7 @@ def execute(filters=None):
 			]
 			holiday_list += h_list
 	else:
-		emp_map = get_employee_details(filters.group_by, filters.company)
+		emp_map = get_employee_details(filters.group_by, filters.company, filters.branch)
 		holiday_list = [emp_map[d]["holiday_list"] for d in emp_map if emp_map[d]["holiday_list"]]
 
 	default_holiday_list = frappe.get_cached_value(
@@ -299,18 +299,17 @@ def get_conditions(filters):
 		conditions += " and company = %(company)s"
 	if filters.get("employee"):
 		conditions += " and employee = %(employee)s"
-	if filters.get("branch"):
-		conditions += " and branch = %(branch)s"
 
 	return conditions, filters
 
 
-def get_employee_details(group_by, company):
+def get_employee_details(group_by, company, branch=None):
 	emp_map = {}
+	cond = "company = %s" % frappe.db.escape(company)
+	if branch:
+		cond += " and branch = %s" % frappe.db.escape(branch)
 	query = """select name, employee_name, designation, department, branch, company,
-		holiday_list from `tabEmployee` where company = %s """ % frappe.db.escape(
-		company
-	)
+		holiday_list from `tabEmployee` where %s """ % cond
 
 	if group_by:
 		group_by = group_by.lower()
@@ -320,7 +319,6 @@ def get_employee_details(group_by, company):
 
 	group_by_parameters = []
 	if group_by:
-
 		group_by_parameters = list(
 			set(detail.get(group_by, "") for detail in employee_details if detail.get(group_by, ""))
 		)
@@ -330,7 +328,6 @@ def get_employee_details(group_by, company):
 	for d in employee_details:
 		if group_by and len(group_by_parameters):
 			if d.get(group_by, None):
-
 				emp_map[d.get(group_by)][d.name] = d
 		else:
 			emp_map[d.name] = d
