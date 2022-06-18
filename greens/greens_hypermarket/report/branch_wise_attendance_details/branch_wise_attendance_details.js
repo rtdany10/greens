@@ -57,7 +57,8 @@ frappe.query_reports["Branch Wise Attendance Details"] = {
 			"fieldname":"branch",
 			"label": __("Branch"),
 			"fieldtype": "Link",
-			"options": "Branch"
+			"options": "Branch",
+			"reqd": 1
 		},
 		{
 			"fieldname":"group_by",
