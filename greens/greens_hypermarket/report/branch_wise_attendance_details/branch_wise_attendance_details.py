@@ -309,7 +309,11 @@ def get_employee_details(group_by, company, branch=None):
 	if branch:
 		cond += " and branch = %s" % frappe.db.escape(branch)
 	else:
-		cond += " and branch IN {}".format(tuple(frappe.db.get_list("Branch", pluck="name")))
+		branch = frappe.db.get_list("Branch", pluck="name")
+		if len(branch) == 1:
+			cond += " and branch = %s" % frappe.db.escape(branch[0])
+		else:
+			cond += " and branch IN {}".format(tuple(branch))
 	query = """select name, employee_name, designation, department, branch, company,
 		holiday_list from `tabEmployee` where %s """ % cond
 
