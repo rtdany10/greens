@@ -18,7 +18,7 @@ def allocate_leave(doc, method=None):
 	if doc.status not in ["Present", "Half Day"]:
 		return
 
-	today_date = today()
+	today_date = doc.attendance_date
 	month_start = get_first_day(today_date)
 	leave_type = frappe.get_cached_value(
 		"Leave Type",
