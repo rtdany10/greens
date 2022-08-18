@@ -18,8 +18,8 @@ def allocate_leave(doc, method=None):
 	if doc.status not in ["Present", "Half Day"]:
 		return
 
-	today_date = doc.attendance_date
-	month_start = get_first_day(today_date)
+	today_date = get_last_day(doc.attendance_date)
+	month_start = get_first_day(doc.attendance_date)
 	leave_type = frappe.get_cached_value(
 		"Leave Type",
 		(frappe.db.get_single_value('HR Settings', 'auto_allocated_leave_type') or "Weekly Off"),
@@ -54,7 +54,7 @@ def allocate_leave(doc, method=None):
 			if to_allocate <= 0:
 				continue
 		if new_allocation != allocation.total_leaves_allocated:
-			allocation.db_set("total_leaves_allocated", new_allocation, update_modified=False)
+			allocation.db_set("total_leaves_allocated", earned_leaves, update_modified=False)
 			create_additional_leave_ledger_entry(allocation, to_allocate, month_start)
 
 	if not leave_allocations:
