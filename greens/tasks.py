@@ -47,7 +47,7 @@ def allocate_leave(doc, method=None):
 	for d in leave_allocations:
 		allocation = frappe.get_doc("Leave Allocation", d.name)
 		new_allocation = flt(allocation.total_leaves_allocated) + flt(earned_leaves)
-		to_allocate = flt(allocation.total_leaves_allocated) - flt(earned_leaves)
+		to_allocate = abs(flt(allocation.total_leaves_allocated) - flt(earned_leaves))
 		if (new_allocation > leave_type.max_leaves_allowed and leave_type.max_leaves_allowed > 0):
 			new_allocation = leave_type.max_leaves_allowed
 			to_allocate = new_allocation - flt(allocation.total_leaves_allocated)
