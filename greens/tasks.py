@@ -39,19 +39,23 @@ def allocate_leave(doc, method=None):
 	marked_days = attendance[0].marked_days
 	if marked_days < 6:
 		return
-	earned_leaves = 1 if marked_days == 6 else (0.5 if marked_days % 3 == 0 else 0)
+	earned_leaves = 1 if marked_days == 6 else ((0.5 * int(marked_days / 3)) + 1)
 	if not earned_leaves:
 		return
 
 	leave_allocations = get_leave_allocations(doc.employee, today_date, leave_type.name)
 	for d in leave_allocations:
 		allocation = frappe.get_doc("Leave Allocation", d.name)
+		if flt(earned_leaves) >= flt(allocation.total_leaves_allocated):
+			continue
 		new_allocation = flt(allocation.total_leaves_allocated) + flt(earned_leaves)
+		to_allocate = flt(allocation.total_leaves_allocated) - flt(earned_leaves)
 		if (new_allocation > leave_type.max_leaves_allowed and leave_type.max_leaves_allowed > 0):
 			new_allocation = leave_type.max_leaves_allowed
+			to_allocate = new_allocation - flt(allocation.total_leaves_allocated)
 		if new_allocation != allocation.total_leaves_allocated:
 			allocation.db_set("total_leaves_allocated", new_allocation, update_modified=False)
-			create_additional_leave_ledger_entry(allocation, earned_leaves, month_start)
+			create_additional_leave_ledger_entry(allocation, to_allocate, month_start)
 
 	if not leave_allocations:
 		frappe.get_doc({
