@@ -39,7 +39,7 @@ def allocate_leave(doc, method=None):
 	marked_days = attendance[0].marked_days
 	if marked_days < 6:
 		return
-	earned_leaves = 1 if marked_days == 6 else ((0.5 * int(marked_days / 3)) + 1)
+	earned_leaves = 1 if marked_days == 6 else ((0.5 * int((marked_days - 6) / 3)) + 1)
 	if not earned_leaves:
 		return
 
