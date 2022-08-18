@@ -53,7 +53,7 @@ def allocate_leave(doc, method=None):
 			to_allocate = new_allocation - flt(allocation.total_leaves_allocated)
 			if to_allocate <= 0:
 				continue
-		if new_allocation != allocation.total_leaves_allocated:
+		if earned_leaves != allocation.total_leaves_allocated:
 			allocation.db_set("total_leaves_allocated", earned_leaves, update_modified=False)
 			create_additional_leave_ledger_entry(allocation, to_allocate, month_start)
 
