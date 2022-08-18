@@ -51,7 +51,7 @@ def allocate_leave(doc, method=None):
 			new_allocation = leave_type.max_leaves_allowed
 		if new_allocation != allocation.total_leaves_allocated:
 			allocation.db_set("total_leaves_allocated", new_allocation, update_modified=False)
-			create_additional_leave_ledger_entry(allocation, earned_leaves, today_date)
+			create_additional_leave_ledger_entry(allocation, earned_leaves, month_start)
 
 	if not leave_allocations:
 		frappe.get_doc({
