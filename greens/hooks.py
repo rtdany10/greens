@@ -116,6 +116,9 @@ scheduler_events = {
     "daily_long": [
         "greens.tasks.daily_attendance"
     ],
+	"monthly": [
+		"greens.scheduletask.casual_leave_allocation"
+	]
 }
 
 # Testing
