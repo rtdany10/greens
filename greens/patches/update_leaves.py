@@ -11,7 +11,8 @@ def execute():
     ll_to_fix = frappe.db.get_all("Leave Allocation", filters={
         # "to_date": last_month,
         "from_date": ["between", [month_start, month_end]],
-        "docstatus": 1
+        "docstatus": 1,
+		"leave_type": "Weekly Off"
     }, fields=["name", "employee"])
     for ll in ll_to_fix:
         doc = frappe.get_doc("Leave Allocation", ll["name"])
