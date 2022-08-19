@@ -21,7 +21,7 @@ def execute():
             frappe.get_last_doc('Attendance', filters={
                 "docstatus": 1,
                 "status": "Present",
-                "attendance_date": [">", month_start],
+                "attendance_date": ["between", [month_start, month_end]],
                 "employee": ll["employee"]
             })
         )
