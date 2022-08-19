@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import add_to_date, get_first_day, today
+from frappe.utils import get_first_day, today
 
 
 def execute():
