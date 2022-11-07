@@ -1,12 +1,13 @@
 # Copyright (c) 2022, Wahni Green Technologies Pvt. Ltd. and Contributors
 # License: GNU General Public License v3. See license.txt
 
+import copy
+
 import frappe
-from erpnext.hr.doctype.employee_checkin.employee_checkin import calculate_working_hours
+from erpnext.hr.doctype.employee_checkin.employee_checkin import \
+				calculate_working_hours
 from erpnext.hr.utils import create_additional_leave_ledger_entry
 from frappe.utils import add_to_date, flt, get_first_day, get_last_day
-
-import copy
 
 
 def calculate_emp_overtime(doc, method=None):

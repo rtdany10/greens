@@ -2,8 +2,8 @@
 # License: GNU General Public License v3. See license.txt
 
 import frappe
-from frappe.utils.data import add_to_date, get_first_day, get_last_day, today
 from frappe.query_builder.functions import Count
+from frappe.utils.data import add_to_date, get_first_day, get_last_day, today
 from pypika import CustomFunction
 from pypika.functions import CurDate
 from pypika.terms import Mod
