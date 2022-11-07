@@ -99,24 +99,25 @@ override_doctype_class = {
 # Hook on document methods and events
 doc_events = {
     "Attendance": {
-        "validate": "greens.crud_events.calculate_emp_overtime"
+        "validate": "greens.crud_events.calculate_emp_overtime",
+        "on_submit": "greens.crud_events.allocate_leave"
     }
 }
 # on_submit
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
+scheduler_events = {
     # "hourly": [
     #     "greens.tasks.clear_duplicate_checkin"
     # ],
     # "daily_long": [
     #     "greens.tasks.daily_attendance"
     # ],
-	# "monthly": [
-	# 	"greens.scheduletask.casual_leave_allocation"
-	# ]
-# }
+	"monthly": [
+		"greens.scheduletask.casual_leave_allocation"
+	]
+}
 
 # Testing
 # -------
