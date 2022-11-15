@@ -28,6 +28,7 @@ def casual_leave_allocation():
 				from_date=get_first_day(frappe.utils.today()),
 				to_date=get_last_day(frappe.utils.today()),
 				new_leaves_allocated=1,
+				carry_forward=1,
 			)
 		)
 		allocation.save(ignore_permissions=True)
