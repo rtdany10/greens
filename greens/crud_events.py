@@ -13,9 +13,8 @@ from frappe.utils import add_to_date, flt, get_first_day, get_last_day
 def calculate_emp_overtime(doc, method=None):
 	if flt(doc.working_hours) >= 10.5:
 		filters = {
-			"skip_auto_attendance": 0,
-			"attendance": ("is", "not set"),
-			"time": ("between", (doc.in_time, doc.out_time)),
+			"employee": doc.employee,
+			"time": ("between", (doc.attendance_date, doc.attendance_date)),
 			"shift": doc.shift,
 		}
 		logs = frappe.db.get_list(
@@ -37,6 +36,8 @@ def calculate_emp_overtime(doc, method=None):
 
 		doc.ot_above_ten = overtime_above_ten if overtime_above_ten > 0 else 0
 		doc.ot_below_ten = doc.working_hours - doc.ot_above_ten - 9.5
+		if doc.ot_below_ten < 0:
+			doc.ot_below_ten = 0
 
 
 def allocate_leave(doc, method=None):
